@@ -351,10 +351,6 @@ const Index = () => {
                 if (!content) return null;
                 return (
                   <SortableWidget key={widgetId} id={widgetId} isEditing={false}>
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
                     {content}
                   </SortableWidget>
                 );
