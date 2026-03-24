@@ -328,20 +328,29 @@ const Index = () => {
         {/* Sortable widgets */}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={visibleWidgets} strategy={verticalListSortingStrategy}>
-            <div className={`space-y-6 ${isEditing ? "pl-8" : ""}`}>
+            <div className={`space-y-${isEditing ? "2" : "6"} ${isEditing ? "pl-8" : ""}`}>
               {visibleWidgets.map((widgetId) => {
+                if (isEditing) {
+                  return (
+                    <SortableWidget key={widgetId} id={widgetId} isEditing>
+                      <Card className="border-dashed">
+                        <CardContent className="flex items-center justify-between p-3">
+                          <span className="text-sm font-medium">{WIDGET_LABELS[widgetId]}</span>
+                          <button
+                            onClick={() => toggleWidget(widgetId)}
+                            className="h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:scale-110 transition-transform"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </CardContent>
+                      </Card>
+                    </SortableWidget>
+                  );
+                }
                 const content = renderWidget(widgetId);
                 if (!content) return null;
                 return (
-                  <SortableWidget key={widgetId} id={widgetId} isEditing={isEditing}>
-                    {isEditing && (
-                      <button
-                        onClick={() => toggleWidget(widgetId)}
-                        className="absolute -right-2 -top-2 z-10 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:scale-110 transition-transform"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
+                  <SortableWidget key={widgetId} id={widgetId} isEditing={false}>
                     {content}
                   </SortableWidget>
                 );
