@@ -52,7 +52,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link to="/dashboard" className="flex items-center gap-3">
-          <img src={logoWhite} alt="NW HST Training Hub" className="h-9 w-9 rounded-lg bg-sidebar-primary/20 p-1" />
+          <img src={logoWhite} alt="NW HST Training Hub" className="h-11 w-11" />
           {!collapsed && (
             <div>
               <h1 className="text-sm font-semibold font-display text-sidebar-accent-foreground tracking-tight">
