@@ -57,6 +57,17 @@ const RequestAccess = () => {
       toast.error("Failed to submit request. Please try again.");
     } else {
       setSubmitted(true);
+      // Send confirmation + admin/facilitator alert emails (fire-and-forget)
+      const selectedSpecialty = specialties?.find((s) => s.id === specialtyId);
+      supabase.functions.invoke("access-request-email", {
+        body: {
+          type: "submission_confirmation",
+          applicant_email: email.trim(),
+          applicant_name: `${firstName.trim()} ${lastName.trim()}`,
+          specialty_name: selectedSpecialty?.short_name || "General",
+          training_grade: trainingGrade.trim() || undefined,
+        },
+      }).catch((e) => console.error("Email notification error:", e));
     }
   };
 
