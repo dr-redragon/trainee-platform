@@ -15,24 +15,38 @@ const RequestAccess = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [deaneryId, setDeaneryId] = useState("");
   const [specialtyId, setSpecialtyId] = useState("none");
   const [trainingGrade, setTrainingGrade] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Fetch specialties publicly (anon key can read based on RLS)
-  // We'll fetch via a simple query - specialties visible to anon won't work due to RLS
-  // So we use a workaround: list them without auth
-  const { data: specialties } = useQuery({
-    queryKey: ["public-specialties"],
+  const { data: deaneries } = useQuery({
+    queryKey: ["public-deaneries"],
     queryFn: async () => {
+      const { data } = await supabase
+        .from("deaneries")
+        .select("id, name, short_name")
+        .eq("is_active", true)
+        .order("name");
+      return data ?? [];
+    },
+  });
+
+  const { data: specialties } = useQuery({
+    queryKey: ["public-specialties", deaneryId],
+    queryFn: async () => {
+      if (!deaneryId) return [];
       const { data } = await supabase
         .from("specialties")
         .select("id, short_name, parent_specialty_id")
+        .eq("deanery_id", deaneryId)
+        .eq("is_active", true)
         .order("sort_order");
       return data ?? [];
     },
+    enabled: !!deaneryId,
   });
 
   const topLevel = specialties?.filter((s) => !s.parent_specialty_id) ?? [];
@@ -43,14 +57,15 @@ const RequestAccess = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    const { error } = await supabase.from("access_requests" as any).insert({
+    const { error } = await supabase.from("access_requests").insert({
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       email: email.trim(),
+      deanery_id: deaneryId || null,
       specialty_id: specialtyId === "none" ? null : specialtyId,
       training_grade: trainingGrade.trim() || null,
       reason: reason.trim() || null,
-    } as any);
+    });
 
     setSubmitting(false);
     if (error) {
@@ -175,9 +190,21 @@ const RequestAccess = () => {
             </div>
 
             <div className="space-y-1.5">
+              <Label>Deanery</Label>
+              <Select value={deaneryId} onValueChange={(v) => { setDeaneryId(v); setSpecialtyId("none"); }}>
+                <SelectTrigger><SelectValue placeholder="Select a deanery" /></SelectTrigger>
+                <SelectContent>
+                  {deaneries?.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
               <Label>Specialty of interest</Label>
-              <Select value={specialtyId} onValueChange={setSpecialtyId}>
-                <SelectTrigger><SelectValue placeholder="Select a specialty" /></SelectTrigger>
+              <Select value={specialtyId} onValueChange={setSpecialtyId} disabled={!deaneryId}>
+                <SelectTrigger><SelectValue placeholder={deaneryId ? "Select a specialty" : "Select a deanery first"} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Not sure / General</SelectItem>
                   {topLevel.map((s) => {
