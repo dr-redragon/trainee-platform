@@ -30,9 +30,14 @@ const SpecialtyDetail = () => {
   const { data: canManage } = useCanManageSpecialty(id);
   const discussionRef = useRef<HTMLDivElement>(null);
 
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+
   useEffect(() => {
     if (location.hash === "#discussion" && discussionRef.current) {
       setTimeout(() => discussionRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
+    }
+    if (location.hash === "#contacts") {
+      setActiveTab("Key Contacts");
     }
   }, [location.hash]);
 
