@@ -203,6 +203,8 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
   });
 
   const isAdmin = role === "admin";
+
+  const timeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
     if (seconds < 60) return "just now";
     const mins = Math.floor(seconds / 60);
