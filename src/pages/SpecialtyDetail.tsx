@@ -23,8 +23,16 @@ import type { Tables } from "@/integrations/supabase/types";
 
 const SpecialtyDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { data: canManage } = useCanManageSpecialty(id);
+  const discussionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (location.hash === "#discussion" && discussionRef.current) {
+      setTimeout(() => discussionRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
+    }
+  }, [location.hash]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
