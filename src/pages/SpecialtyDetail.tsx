@@ -21,7 +21,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2, ListPlus } from "lucide-react";
 import { SubheadingGroup } from "@/components/SubheadingGroup";
 import { toast } from "sonner";
 import { useCanManageSpecialty } from "@/hooks/useUserRole";
@@ -51,6 +51,10 @@ const SpecialtyDetail = () => {
   const [renameSubName, setRenameSubName] = useState("");
   const [deleteSubId, setDeleteSubId] = useState<string | null>(null);
   const [deleteAction, setDeleteAction] = useState<"move" | "delete">("move");
+  const [addSubheadingForSub, setAddSubheadingForSub] = useState<string | null>(null);
+  const [newSubheadingName, setNewSubheadingName] = useState("");
+  // Track manually added (empty) subheadings per subsection so they show before any resource is assigned
+  const [manualSubheadings, setManualSubheadings] = useState<Record<string, string[]>>({});
   const [moveTargetId, setMoveTargetId] = useState<string>("");
 
   useEffect(() => {
@@ -348,12 +352,15 @@ const SpecialtyDetail = () => {
               .filter((r) => r.subsection_id === sub.id)
               .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
-            const existingSubheadings = [...new Set(
+            const resourceSubheadings = [...new Set(
               subResources.map((r) => (r as any).subheading).filter(Boolean) as string[]
             )];
+            // Merge in any manually-added (empty) subheadings
+            const manual = manualSubheadings[sub.id] ?? [];
+            const allSubheadings = [...new Set([...resourceSubheadings, ...manual])];
 
             const ungrouped = subResources.filter((r) => !(r as any).subheading);
-            const grouped = existingSubheadings.map((sh) => ({
+            const grouped = allSubheadings.map((sh) => ({
               name: sh,
               resources: subResources.filter((r) => (r as any).subheading === sh),
             }));
@@ -365,7 +372,15 @@ const SpecialtyDetail = () => {
                   <div className="flex items-center gap-1">
                     {canManage && (
                       <>
-                        <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={existingSubheadings} />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs h-8"
+                          onClick={() => { setAddSubheadingForSub(sub.id); setNewSubheadingName(""); }}
+                        >
+                          <ListPlus className="h-3.5 w-3.5" /> Subheading
+                        </Button>
+                        <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={allSubheadings} />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -397,7 +412,7 @@ const SpecialtyDetail = () => {
                   </div>
                 </div>
 
-                {subResources.length === 0 ? (
+                {subResources.length === 0 && grouped.every(g => g.resources.length === 0) && grouped.length === 0 ? (
                   <Card className="border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                       <FolderOpen className="h-10 w-10 text-muted-foreground/30 mb-3" />
@@ -412,7 +427,7 @@ const SpecialtyDetail = () => {
                         <SortableContext items={ungrouped.map((r) => r.id)} strategy={verticalListSortingStrategy}>
                           <div className="space-y-2">
                             {ungrouped.map((r) => (
-                              <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={existingSubheadings} />
+                              <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={allSubheadings} />
                             ))}
                           </div>
                         </SortableContext>
@@ -421,15 +436,21 @@ const SpecialtyDetail = () => {
 
                     {grouped.map((group) => (
                       <SubheadingGroup key={group.name} name={group.name} resourceIds={group.resources.map((r) => r.id)} canManage={!!canManage}>
-                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, group.resources)}>
-                          <SortableContext items={group.resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-                            <div className="space-y-2">
-                              {group.resources.map((r) => (
-                                <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={existingSubheadings} />
-                              ))}
-                            </div>
-                          </SortableContext>
-                        </DndContext>
+                        {group.resources.length === 0 ? (
+                          <div className="flex items-center justify-center py-6 text-xs text-muted-foreground border border-dashed rounded-md">
+                            No resources yet — use "Add Resource" and select this subheading
+                          </div>
+                        ) : (
+                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, group.resources)}>
+                            <SortableContext items={group.resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+                              <div className="space-y-2">
+                                {group.resources.map((r) => (
+                                  <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={allSubheadings} />
+                                ))}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
+                        )}
                       </SubheadingGroup>
                     ))}
                   </div>
@@ -482,6 +503,54 @@ const SpecialtyDetail = () => {
             </div>
             <Button className="w-full" disabled={!newSubName.trim() || addSubsection.isPending} onClick={() => addSubsection.mutate(newSubName.trim())}>
               {addSubsection.isPending ? "Adding…" : "Add Section"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Subheading Dialog */}
+      <Dialog open={!!addSubheadingForSub} onOpenChange={(o) => { if (!o) { setAddSubheadingForSub(null); setNewSubheadingName(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Subheading</DialogTitle>
+            <DialogDescription>Create a subheading to group resources within this section.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1.5">
+              <Label>Subheading Name</Label>
+              <Input
+                value={newSubheadingName}
+                onChange={(e) => setNewSubheadingName(e.target.value)}
+                placeholder="e.g. Core Curriculum, Assessment Tools"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newSubheadingName.trim() && addSubheadingForSub) {
+                    setManualSubheadings((prev) => ({
+                      ...prev,
+                      [addSubheadingForSub]: [...(prev[addSubheadingForSub] ?? []), newSubheadingName.trim()],
+                    }));
+                    toast.success("Subheading added");
+                    setAddSubheadingForSub(null);
+                    setNewSubheadingName("");
+                  }
+                }}
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={!newSubheadingName.trim()}
+              onClick={() => {
+                if (addSubheadingForSub) {
+                  setManualSubheadings((prev) => ({
+                    ...prev,
+                    [addSubheadingForSub]: [...(prev[addSubheadingForSub] ?? []), newSubheadingName.trim()],
+                  }));
+                  toast.success("Subheading added");
+                  setAddSubheadingForSub(null);
+                  setNewSubheadingName("");
+                }
+              }}
+            >
+              Add Subheading
             </Button>
           </div>
         </DialogContent>
