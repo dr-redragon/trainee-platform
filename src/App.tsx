@@ -29,6 +29,7 @@ const App = () => (
           <Route path="/contacts" element={<KeyContacts />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/profile" element={<MyProfile />} />
+          <Route path="/community" element={<CommunityHub />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
