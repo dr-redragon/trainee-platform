@@ -158,11 +158,11 @@ export function AdminAccessRequests() {
 
                 {req.status === "pending" && (
                   <div className="flex items-end gap-3 pt-2 border-t">
-                    <div className="flex-1">
+                    <div className="flex-1 space-y-1">
                       <Textarea
                         value={reviewNote[req.id] ?? ""}
                         onChange={(e) => setReviewNote((prev) => ({ ...prev, [req.id]: e.target.value }))}
-                        placeholder="Add a note (optional)…"
+                        placeholder="Add a note (required for rejection)…"
                         rows={2}
                         className="text-xs"
                       />
@@ -173,7 +173,8 @@ export function AdminAccessRequests() {
                         variant="outline"
                         className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
                         onClick={() => updateRequest.mutate({ id: req.id, status: "rejected" })}
-                        disabled={updateRequest.isPending}
+                        disabled={updateRequest.isPending || !(reviewNote[req.id]?.trim())}
+                        title={!(reviewNote[req.id]?.trim()) ? "A reason is required when rejecting" : ""}
                       >
                         <XCircle className="h-3.5 w-3.5" /> Reject
                       </Button>
