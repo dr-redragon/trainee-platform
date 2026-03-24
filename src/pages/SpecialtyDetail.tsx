@@ -21,7 +21,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2, ListPlus } from "lucide-react";
 import { SubheadingGroup } from "@/components/SubheadingGroup";
 import { toast } from "sonner";
 import { useCanManageSpecialty } from "@/hooks/useUserRole";
