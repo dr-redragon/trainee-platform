@@ -398,6 +398,7 @@ export type Database = {
           id: string
           resource_type: Database["public"]["Enums"]["resource_type"]
           sort_order: number | null
+          subheading: string | null
           subsection_id: string
           title: string
           updated_at: string
@@ -412,6 +413,7 @@ export type Database = {
           id?: string
           resource_type?: Database["public"]["Enums"]["resource_type"]
           sort_order?: number | null
+          subheading?: string | null
           subsection_id: string
           title: string
           updated_at?: string
@@ -426,6 +428,7 @@ export type Database = {
           id?: string
           resource_type?: Database["public"]["Enums"]["resource_type"]
           sort_order?: number | null
+          subheading?: string | null
           subsection_id?: string
           title?: string
           updated_at?: string
