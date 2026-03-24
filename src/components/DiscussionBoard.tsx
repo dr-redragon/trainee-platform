@@ -377,11 +377,24 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
                           </div>
                           <p className={`text-sm text-muted-foreground ${isExpanded ? "" : "line-clamp-2"}`}>{post.content}</p>
                         </div>
-                        {currentUser && (currentUser.id === post.author_id) && (
-                          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => deletePost.mutate(post.id)}>
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {canPin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="shrink-0"
+                              title={post.is_pinned ? "Unpin" : "Pin"}
+                              onClick={() => togglePin.mutate({ id: post.id, pinned: !!post.is_pinned })}
+                            >
+                              <Pin className={`h-3.5 w-3.5 ${post.is_pinned ? "text-accent fill-accent" : "text-muted-foreground"}`} />
+                            </Button>
+                          )}
+                          {currentUser && (currentUser.id === post.author_id || isAdmin) && (
+                            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => deletePost.mutate(post.id)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-4 mt-3 text-[10px] text-muted-foreground">
                         <span className="flex items-center gap-1"><User className="h-3 w-3" /> {getAuthorName(post.author_id)}</span>
