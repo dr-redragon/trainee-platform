@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,9 +30,14 @@ const SpecialtyDetail = () => {
   const { data: canManage } = useCanManageSpecialty(id);
   const discussionRef = useRef<HTMLDivElement>(null);
 
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+
   useEffect(() => {
     if (location.hash === "#discussion" && discussionRef.current) {
       setTimeout(() => discussionRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
+    }
+    if (location.hash === "#contacts") {
+      setActiveTab("Key Contacts");
     }
   }, [location.hash]);
 
@@ -189,7 +194,7 @@ const SpecialtyDetail = () => {
         <SpecialtyNoticeBoard specialtyId={id!} canManage={!!canManage} />
 
         {/* Tabs */}
-        <Tabs defaultValue={defaultTab} className="w-full">
+        <Tabs value={activeTab ?? defaultTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto bg-secondary/50 p-1">
             {tabNames.map((tab) => (
               <TabsTrigger key={tab} value={tab} className="text-xs whitespace-nowrap">
