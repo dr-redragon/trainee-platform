@@ -184,6 +184,9 @@ const SpecialtyDetail = () => {
           )}
         </div>
 
+        {/* Notice Board */}
+        <SpecialtyNoticeBoard specialtyId={id!} canManage={!!canManage} />
+
         {/* Tabs */}
         <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto bg-secondary/50 p-1">
