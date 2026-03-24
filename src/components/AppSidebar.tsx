@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  LayoutDashboard, Users, Search, ChevronDown,
+  LayoutDashboard, Users, Search, ChevronDown, ChevronRight,
   BookOpen, LogOut, User, Shield
 } from "lucide-react";
 import { getIcon } from "@/lib/iconMap";
@@ -21,19 +21,29 @@ import {
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
   const [specOpen, setSpecOpen] = useState(true);
+  const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
   const { data: role } = useUserRole();
 
-  // Fetch specialties from DB (RLS enforced)
   const { data: specialties } = useQuery({
     queryKey: ["sidebar-specialties"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("specialties").select("id, short_name, icon_name, color").order("sort_order");
+      const { data, error } = await supabase
+        .from("specialties")
+        .select("id, short_name, icon_name, color, parent_specialty_id, sort_order")
+        .order("sort_order");
       if (error) throw error;
       return data;
     },
   });
+
+  // Separate top-level and children
+  const topLevel = specialties?.filter((s) => !s.parent_specialty_id) ?? [];
+  const childrenOf = (parentId: string) =>
+    specialties?.filter((s) => s.parent_specialty_id === parentId) ?? [];
+
+  const toggleParent = (id: string) =>
+    setExpandedParents((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -89,21 +99,75 @@ export function AppSidebar() {
             <CollapsibleContent>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {specialties?.map((s) => {
+                  {topLevel.map((s) => {
                     const SIcon = getIcon(s.icon_name);
+                    const children = childrenOf(s.id);
+                    const hasChildren = children.length > 0;
+                    const isExpanded = expandedParents[s.id] ?? false;
+
+                    if (!hasChildren) {
+                      return (
+                        <SidebarMenuItem key={s.id}>
+                          <SidebarMenuButton asChild>
+                            <NavLink
+                              to={`/specialty/${s.id}`}
+                              activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                              className="text-xs"
+                            >
+                              <SIcon className="h-3.5 w-3.5" />
+                              {!collapsed && <span>{s.short_name}</span>}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    }
+
                     return (
-                      <SidebarMenuItem key={s.id}>
-                        <SidebarMenuButton asChild>
-                          <NavLink
-                            to={`/specialty/${s.id}`}
-                            activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                            className="text-xs"
-                          >
-                            <SIcon className="h-3.5 w-3.5" />
-                            {!collapsed && <span>{s.short_name}</span>}
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                      <div key={s.id}>
+                        <SidebarMenuItem>
+                          <div className="flex items-center w-full">
+                            <SidebarMenuButton asChild className="flex-1">
+                              <NavLink
+                                to={`/specialty/${s.id}`}
+                                activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                                className="text-xs"
+                              >
+                                <SIcon className="h-3.5 w-3.5" />
+                                {!collapsed && <span>{s.short_name}</span>}
+                              </NavLink>
+                            </SidebarMenuButton>
+                            {!collapsed && (
+                              <button
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleParent(s.id); }}
+                                className="p-1 rounded hover:bg-sidebar-accent text-sidebar-muted hover:text-sidebar-accent-foreground transition-colors"
+                              >
+                                <ChevronRight className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                              </button>
+                            )}
+                          </div>
+                        </SidebarMenuItem>
+                        {!collapsed && isExpanded && (
+                          <div className="ml-4 pl-2 border-l border-sidebar-border">
+                            {children.map((child) => {
+                              const CIcon = getIcon(child.icon_name);
+                              return (
+                                <SidebarMenuItem key={child.id}>
+                                  <SidebarMenuButton asChild>
+                                    <NavLink
+                                      to={`/specialty/${child.id}`}
+                                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                                      className="text-[11px]"
+                                    >
+                                      <CIcon className="h-3 w-3" />
+                                      <span>{child.short_name}</span>
+                                    </NavLink>
+                                  </SidebarMenuButton>
+                                </SidebarMenuItem>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </SidebarMenu>

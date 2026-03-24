@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Clock, Megaphone, FileText, Video, LinkIcon, BookOpen, CheckSquare, FolderOpen } from "lucide-react";
+import { Clock, Megaphone, FileText, Video, LinkIcon, BookOpen, CheckSquare, FolderOpen, ChevronRight } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,17 +27,18 @@ const Index = () => {
     enabled: !!user,
   });
 
-  // Specialties the user can access (RLS enforced)
   const { data: specialties } = useQuery({
     queryKey: ["my-specialties"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("specialties").select("*").order("sort_order");
+      const { data, error } = await supabase
+        .from("specialties")
+        .select("*")
+        .order("sort_order");
       if (error) throw error;
       return data;
     },
   });
 
-  // Active announcements
   const { data: announcements } = useQuery({
     queryKey: ["active-announcements"],
     queryFn: async () => {
@@ -52,7 +53,6 @@ const Index = () => {
     },
   });
 
-  // Recent resources (across all accessible subsections)
   const { data: recentResources } = useQuery({
     queryKey: ["recent-resources"],
     queryFn: async () => {
@@ -67,6 +67,11 @@ const Index = () => {
   });
 
   const firstName = profile?.first_name || "Trainee";
+
+  // Group specialties: top-level and children
+  const topLevel = specialties?.filter((s) => !(s as any).parent_specialty_id) ?? [];
+  const childrenOf = (parentId: string) =>
+    specialties?.filter((s) => (s as any).parent_specialty_id === parentId) ?? [];
 
   return (
     <DashboardLayout>
@@ -102,30 +107,67 @@ const Index = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {specialties.map((s, i) => {
+            <div className="space-y-6">
+              {topLevel.map((s, i) => {
                 const SIcon = getIcon(s.icon_name);
                 const color = s.color ?? "174 60% 40%";
+                const children = childrenOf(s.id);
+
                 return (
-                  <Link key={s.id} to={`/specialty/${s.id}`}>
-                    <Card
-                      className="group hover:shadow-md hover:border-accent/40 transition-all duration-200 cursor-pointer animate-fade-in"
-                      style={{ animationDelay: `${0.05 * i + 0.15}s` }}
-                    >
-                      <CardContent className="p-5">
-                        <div
-                          className="flex h-10 w-10 items-center justify-center rounded-lg mb-3 transition-transform group-hover:scale-110"
-                          style={{ backgroundColor: `hsl(${color} / 0.12)` }}
-                        >
-                          <SIcon className="h-5 w-5" style={{ color: `hsl(${color})` }} />
-                        </div>
-                        <h3 className="font-semibold text-sm mb-1 group-hover:text-accent transition-colors">
-                          {s.short_name}
-                        </h3>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{s.name}</p>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                  <div key={s.id} className="animate-fade-in" style={{ animationDelay: `${0.05 * i + 0.15}s` }}>
+                    {/* Parent card */}
+                    <Link to={`/specialty/${s.id}`}>
+                      <Card className="group hover:shadow-md hover:border-accent/40 transition-all duration-200 cursor-pointer mb-3">
+                        <CardContent className="p-5 flex items-center gap-4">
+                          <div
+                            className="flex h-10 w-10 items-center justify-center rounded-lg transition-transform group-hover:scale-110"
+                            style={{ backgroundColor: `hsl(${color} / 0.12)` }}
+                          >
+                            <SIcon className="h-5 w-5" style={{ color: `hsl(${color})` }} />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-sm group-hover:text-accent transition-colors">
+                              {s.short_name}
+                            </h3>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{s.name}</p>
+                          </div>
+                          {children.length > 0 && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              {children.length} subspecialties
+                            </Badge>
+                          )}
+                          <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors" />
+                        </CardContent>
+                      </Card>
+                    </Link>
+
+                    {/* Subspecialty grid */}
+                    {children.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 ml-6 pl-4 border-l-2 border-muted">
+                        {children.map((child) => {
+                          const CIcon = getIcon(child.icon_name);
+                          const cColor = child.color ?? "174 60% 40%";
+                          return (
+                            <Link key={child.id} to={`/specialty/${child.id}`}>
+                              <Card className="group hover:shadow-sm hover:border-accent/30 transition-all duration-200 cursor-pointer">
+                                <CardContent className="p-4">
+                                  <div
+                                    className="flex h-8 w-8 items-center justify-center rounded-md mb-2 transition-transform group-hover:scale-110"
+                                    style={{ backgroundColor: `hsl(${cColor} / 0.12)` }}
+                                  >
+                                    <CIcon className="h-4 w-4" style={{ color: `hsl(${cColor})` }} />
+                                  </div>
+                                  <h4 className="text-xs font-medium group-hover:text-accent transition-colors">
+                                    {child.short_name}
+                                  </h4>
+                                </CardContent>
+                              </Card>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

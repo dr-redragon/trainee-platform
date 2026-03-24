@@ -417,6 +417,7 @@ export type Database = {
           icon_name: string | null
           id: string
           name: string
+          parent_specialty_id: string | null
           short_name: string
           slug: string
           sort_order: number | null
@@ -428,6 +429,7 @@ export type Database = {
           icon_name?: string | null
           id?: string
           name: string
+          parent_specialty_id?: string | null
           short_name: string
           slug: string
           sort_order?: number | null
@@ -439,12 +441,21 @@ export type Database = {
           icon_name?: string | null
           id?: string
           name?: string
+          parent_specialty_id?: string | null
           short_name?: string
           slug?: string
           sort_order?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "specialties_parent_specialty_id_fkey"
+            columns: ["parent_specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subsections: {
         Row: {
