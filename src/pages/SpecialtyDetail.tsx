@@ -26,6 +26,7 @@ import type { Tables } from "@/integrations/supabase/types";
 const SpecialtyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { data: canManage } = useCanManageSpecialty(id);
   const discussionRef = useRef<HTMLDivElement>(null);
