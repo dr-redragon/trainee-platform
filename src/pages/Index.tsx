@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Clock, Megaphone, FileText, Video, LinkIcon, BookOpen, CheckSquare,
   FolderOpen, ChevronRight, Settings2, GripVertical, Eye, EyeOff, X, Columns2, Rows3,
+  ArrowLeftRight,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -205,17 +206,36 @@ const Index = () => {
     }
   };
 
+  const moveToOtherColumn = (widgetId: WidgetId) => {
+    const inRight = rightColumnWidgets.includes(widgetId);
+    const newRight = inRight
+      ? rightColumnWidgets.filter((w) => w !== widgetId)
+      : [...rightColumnWidgets, widgetId];
+    savePrefs.mutate({ right_column_widgets: newRight });
+  };
+
   const renderEditCard = (widgetId: WidgetId) => (
     <SortableWidget key={widgetId} id={widgetId} isEditing>
       <Card className="border-dashed">
         <CardContent className="flex items-center justify-between p-3">
           <span className="text-sm font-medium">{WIDGET_LABELS[widgetId]}</span>
-          <button
-            onClick={() => toggleWidget(widgetId)}
-            className="h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:scale-110 transition-transform"
-          >
-            <X className="h-3 w-3" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {columns === 2 && (
+              <button
+                onClick={() => moveToOtherColumn(widgetId)}
+                className="h-5 w-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center hover:scale-110 hover:bg-accent/20 hover:text-accent transition-all"
+                title={rightColumnWidgets.includes(widgetId) ? "Move to left column" : "Move to right column"}
+              >
+                <ArrowLeftRight className="h-3 w-3" />
+              </button>
+            )}
+            <button
+              onClick={() => toggleWidget(widgetId)}
+              className="h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:scale-110 transition-transform"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
         </CardContent>
       </Card>
     </SortableWidget>
