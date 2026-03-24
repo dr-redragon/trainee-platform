@@ -130,9 +130,9 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                 >
                   <SIcon className="h-4 w-4 mr-2 shrink-0" style={{ color: `hsl(${s.color})` }} />
                   <div>
-                    <span className="font-medium">{s.short_name}</span>
+                    <span className="font-medium"><HighlightMatch text={s.short_name} query={debouncedQuery} /></span>
                     {s.name !== s.short_name && (
-                      <span className="text-muted-foreground ml-2 text-xs">{s.name}</span>
+                      <span className="text-muted-foreground ml-2 text-xs"><HighlightMatch text={s.name} query={debouncedQuery} /></span>
                     )}
                   </div>
                 </CommandItem>
@@ -152,7 +152,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               >
                 <FileText className="h-4 w-4 mr-2 shrink-0 text-muted-foreground" />
                 <div className="flex flex-col">
-                  <span className="font-medium">{r.title}</span>
+                  <span className="font-medium"><HighlightMatch text={r.title} query={debouncedQuery} /></span>
                   <span className="text-xs text-muted-foreground">{r.subsections.specialties.short_name}</span>
                 </div>
               </CommandItem>
@@ -171,8 +171,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               >
                 <Users className="h-4 w-4 mr-2 shrink-0 text-muted-foreground" />
                 <div className="flex flex-col">
-                  <span className="font-medium">{c.name}</span>
-                  <span className="text-xs text-muted-foreground">{c.role} · {c.organisation}</span>
+                  <span className="font-medium"><HighlightMatch text={c.name} query={debouncedQuery} /></span>
+                  <span className="text-xs text-muted-foreground"><HighlightMatch text={c.role} query={debouncedQuery} /> · <HighlightMatch text={c.organisation} query={debouncedQuery} /></span>
                 </div>
               </CommandItem>
             ))}
@@ -189,7 +189,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                 className="cursor-pointer"
               >
                 <MessageSquare className="h-4 w-4 mr-2 shrink-0 text-muted-foreground" />
-                <span className="font-medium">{d.title}</span>
+                <span className="font-medium"><HighlightMatch text={d.title} query={debouncedQuery} /></span>
               </CommandItem>
             ))}
           </CommandGroup>
