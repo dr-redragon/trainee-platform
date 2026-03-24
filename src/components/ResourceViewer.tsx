@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ExternalLink, Download, FileText, AlertTriangle } from "lucide-react";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import type { Tables } from "@/integrations/supabase/types";
