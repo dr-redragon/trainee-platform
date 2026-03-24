@@ -17,12 +17,14 @@ import { NavLink } from "@/components/NavLink";
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger
 } from "@/components/ui/collapsible";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const [specOpen, setSpecOpen] = useState(true);
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
+  const [searchOpen, setSearchOpen] = useState(false);
   const { data: role } = useUserRole();
 
   const { data: specialties } = useQuery({
@@ -66,12 +68,17 @@ export function AppSidebar() {
       <SidebarContent className="px-2 py-3">
         {!collapsed && (
           <div className="px-2 mb-3">
-            <div className="flex items-center gap-2 rounded-md bg-sidebar-accent px-3 py-2 text-xs text-sidebar-muted">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="flex items-center gap-2 rounded-md bg-sidebar-accent px-3 py-2 text-xs text-sidebar-muted w-full hover:text-sidebar-accent-foreground transition-colors"
+            >
               <Search className="h-3.5 w-3.5" />
-              <span>Search resources…</span>
-            </div>
+              <span className="flex-1 text-left">Search resources…</span>
+              <kbd className="hidden sm:inline-flex text-[10px] bg-sidebar-border rounded px-1.5 py-0.5">⌘K</kbd>
+            </button>
           </div>
         )}
+        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
         <SidebarGroup>
           <SidebarGroupContent>
