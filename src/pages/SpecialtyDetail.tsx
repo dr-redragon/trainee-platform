@@ -7,6 +7,7 @@ import { ContactCard } from "@/components/ContactCard";
 import { DiscussionBoard } from "@/components/DiscussionBoard";
 import { SpecialtyNoticeBoard } from "@/components/SpecialtyNoticeBoard";
 import { ResourceCard } from "@/components/ResourceCard";
+import { DroppableSubheadingGroup, DroppableUngrouped } from "@/components/DroppableSubheadingGroup";
 import { AddResourceDialog } from "@/components/AddResourceDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
