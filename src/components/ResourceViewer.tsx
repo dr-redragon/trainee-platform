@@ -94,14 +94,29 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
             {resource.resource_type.toUpperCase()}
           </Badge>
           {rawUrl && (
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleOpen}>
+            <a
+              href={rawUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
               <ExternalLink className="h-3 w-3" /> Open
-            </Button>
+            </a>
           )}
           {resource.file_url && (
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleDownload}>
+            <a
+              href={resource.file_url}
+              download={resource.title || "download"}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
               <Download className="h-3 w-3" /> Download
-            </Button>
+            </a>
           )}
         </div>
 
