@@ -24,7 +24,7 @@ export function StarredContactsWidget() {
     enabled: !!user,
   });
 
-  const obfuscateEmail = (email: string) => email.replace("@", " [at] ");
+  
 
   if (!starred?.length) {
     return (
@@ -71,10 +71,10 @@ export function StarredContactsWidget() {
                   <Building2 className="h-2.5 w-2.5" />
                   {c.organisation}
                 </p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <a href={`mailto:${c.email}`} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
                   <Mail className="h-2.5 w-2.5" />
-                  {obfuscateEmail(c.email)}
-                </p>
+                  {c.email}
+                </a>
               </div>
             </div>
           );

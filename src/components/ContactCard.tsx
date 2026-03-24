@@ -91,10 +91,10 @@ export function ContactCard({ contact }: ContactCardProps) {
               {contact.organisation}
             </p>
             <div className="flex items-center gap-4 pt-1">
-              <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <a href={`mailto:${contact.email}`} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors">
                 <Mail className="h-3 w-3" />
-                {obfuscateEmail(contact.email)}
-              </span>
+                {contact.email}
+              </a>
               {contact.phone && (
                 <span className="text-xs text-muted-foreground flex items-center gap-1.5">
                   <Phone className="h-3 w-3" />

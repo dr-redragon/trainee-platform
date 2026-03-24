@@ -205,9 +205,9 @@ export function AdminContacts() {
                     </div>
                     <p className="text-xs text-muted-foreground">{c.role}</p>
                     <p className="text-xs text-muted-foreground">{c.organisation}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Mail className="h-3 w-3" /> {obfuscateEmail(c.email)}
-                    </p>
+                    <a href={`mailto:${c.email}`} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+                      <Mail className="h-3 w-3" /> {c.email}
+                    </a>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
