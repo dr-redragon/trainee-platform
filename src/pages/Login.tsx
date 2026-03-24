@@ -58,9 +58,7 @@ const Login = () => {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md animate-fade-in">
           <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <BookOpen className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src={logoWhite} alt="NW HST Training Hub" className="h-9 w-9 rounded-lg bg-primary p-1" />
             <h1 className="text-lg font-display font-semibold tracking-tight">North West HST Training Hub</h1>
           </div>
 
