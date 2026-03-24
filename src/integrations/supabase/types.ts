@@ -14,16 +14,363 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: unknown
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          resource_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          resource_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          resource_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          archived: boolean | null
+          category: Database["public"]["Enums"]["contact_category"]
+          created_at: string
+          email: string
+          id: string
+          name: string
+          organisation: string
+          phone: string | null
+          profile_url: string | null
+          role: string
+          specialty_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean | null
+          category: Database["public"]["Enums"]["contact_category"]
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          organisation: string
+          phone?: string | null
+          profile_url?: string | null
+          role: string
+          specialty_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean | null
+          category?: Database["public"]["Enums"]["contact_category"]
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          organisation?: string
+          phone?: string | null
+          profile_url?: string | null
+          role?: string
+          specialty_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string | null
+          gdpr_consent_at: string | null
+          id: string
+          last_name: string | null
+          specialty_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          gdpr_consent_at?: string | null
+          id?: string
+          last_name?: string | null
+          specialty_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          gdpr_consent_at?: string | null
+          id?: string
+          last_name?: string | null
+          specialty_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_profiles_specialty"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resources: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          description: string | null
+          embed_url: string | null
+          external_url: string | null
+          file_url: string | null
+          id: string
+          resource_type: Database["public"]["Enums"]["resource_type"]
+          sort_order: number | null
+          subsection_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          description?: string | null
+          embed_url?: string | null
+          external_url?: string | null
+          file_url?: string | null
+          id?: string
+          resource_type?: Database["public"]["Enums"]["resource_type"]
+          sort_order?: number | null
+          subsection_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          description?: string | null
+          embed_url?: string | null
+          external_url?: string | null
+          file_url?: string | null
+          id?: string
+          resource_type?: Database["public"]["Enums"]["resource_type"]
+          sort_order?: number | null
+          subsection_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resources_subsection_id_fkey"
+            columns: ["subsection_id"]
+            isOneToOne: false
+            referencedRelation: "subsections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      specialties: {
+        Row: {
+          color: string | null
+          created_at: string
+          icon_name: string | null
+          id: string
+          name: string
+          short_name: string
+          slug: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          icon_name?: string | null
+          id?: string
+          name: string
+          short_name: string
+          slug: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          icon_name?: string | null
+          id?: string
+          name?: string
+          short_name?: string
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subsections: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number | null
+          specialty_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number | null
+          specialty_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number | null
+          specialty_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subsections_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "trainee"
+      contact_category:
+        | "deanery"
+        | "tpd"
+        | "associate_dean"
+        | "educational_supervisor"
+        | "trainee_rep"
+        | "royal_college"
+        | "trust_lead"
+        | "rota_admin"
+      resource_type:
+        | "pdf"
+        | "document"
+        | "video"
+        | "link"
+        | "presentation"
+        | "checklist"
+        | "folder"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +497,27 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "trainee"],
+      contact_category: [
+        "deanery",
+        "tpd",
+        "associate_dean",
+        "educational_supervisor",
+        "trainee_rep",
+        "royal_college",
+        "trust_lead",
+        "rota_admin",
+      ],
+      resource_type: [
+        "pdf",
+        "document",
+        "video",
+        "link",
+        "presentation",
+        "checklist",
+        "folder",
+      ],
+    },
   },
 } as const
