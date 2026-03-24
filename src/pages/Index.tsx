@@ -20,8 +20,10 @@ import { StarredContactsWidget } from "@/components/dashboard/StarredContactsWid
 import { SpecialtiesWidget } from "@/components/dashboard/SpecialtiesWidget";
 import { RecentResourcesWidget } from "@/components/dashboard/RecentResourcesWidget";
 import {
-  DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors,
+  DndContext, closestCenter, pointerWithin, rectIntersection,
+  PointerSensor, KeyboardSensor, useSensor, useSensors,
   type DragEndEvent, DragOverlay, type DragStartEvent, type DragOverEvent,
+  useDroppable,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -55,6 +57,23 @@ function SortableWidget({ id, children, isEditing }: { id: string; children: Rea
         </div>
       )}
       {children}
+    </div>
+  );
+}
+
+function DroppableColumn({ id, children, label }: { id: string; children: React.ReactNode; label: string }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">{label}</p>
+      <div
+        ref={setNodeRef}
+        className={`space-y-2 min-h-[80px] rounded-lg border-2 border-dashed p-2 transition-colors ${
+          isOver ? "border-accent bg-accent/5" : "border-muted"
+        }`}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -110,56 +129,53 @@ const Index = () => {
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
     const activeWidget = active.id as WidgetId;
-    const overWidget = over.id as WidgetId;
+    const overId = over.id as string;
 
     if (columns === 2 && isEditing) {
-      // Determine which column each is in
       const activeInRight = rightColumnWidgets.includes(activeWidget);
-      const overInRight = rightColumnWidgets.includes(overWidget);
-      const overIsDropzone = (overWidget as string) === "dropzone-left" || (overWidget as string) === "dropzone-right";
 
-      if (overIsDropzone) {
-        // Dropped on empty column dropzone
-        const newRight = (overWidget as string) === "dropzone-right"
+      // Dropped on a column container (not on a widget)
+      if (overId === "col-left" || overId === "col-right") {
+        const targetIsRight = overId === "col-right";
+        if (activeInRight === targetIsRight) return; // already there
+        const newRight = targetIsRight
           ? [...rightColumnWidgets, activeWidget]
           : rightColumnWidgets.filter((w) => w !== activeWidget);
         savePrefs.mutate({ right_column_widgets: newRight });
         return;
       }
 
+      // Dropped on another widget
+      const overWidget = overId as WidgetId;
+      if (activeWidget === overWidget) return;
+
+      const overInRight = rightColumnWidgets.includes(overWidget);
+
       if (activeInRight === overInRight) {
-        // Same column — reorder within that column
+        // Same column reorder
         const col = activeInRight ? [...rightColumn] : [...leftColumn];
         const oldIdx = col.indexOf(activeWidget);
         const newIdx = col.indexOf(overWidget);
         const reordered = arrayMove(col, oldIdx, newIdx);
-
-        // Rebuild full layout preserving order
         const newLayout = activeInRight
           ? [...leftColumn, ...reordered, ...hiddenWidgets]
           : [...reordered, ...rightColumn, ...hiddenWidgets];
         savePrefs.mutate({ widget_layout: newLayout });
       } else {
         // Cross-column move
-        let newRight: WidgetId[];
-        if (activeInRight) {
-          // Moving from right to left
-          newRight = rightColumnWidgets.filter((w) => w !== activeWidget);
-        } else {
-          // Moving from left to right
-          newRight = [...rightColumnWidgets, activeWidget];
-        }
+        const newRight = activeInRight
+          ? rightColumnWidgets.filter((w) => w !== activeWidget)
+          : [...rightColumnWidgets, activeWidget];
 
-        // Reorder: place active near over in the target column
         const targetCol = overInRight
           ? allVisible.filter((w) => newRight.includes(w))
           : allVisible.filter((w) => !newRight.includes(w));
         const overIdx = targetCol.indexOf(overWidget);
         const withoutActive = targetCol.filter((w) => w !== activeWidget);
-        withoutActive.splice(overIdx, 0, activeWidget);
+        withoutActive.splice(overIdx >= 0 ? overIdx : withoutActive.length, 0, activeWidget);
 
         const otherCol = overInRight
           ? allVisible.filter((w) => !newRight.includes(w) && w !== activeWidget)
@@ -170,8 +186,10 @@ const Index = () => {
       }
     } else {
       // Single column reorder
+      if (activeWidget === overId) return;
       const oldIndex = visibleWidgets.indexOf(activeWidget);
-      const newIndex = visibleWidgets.indexOf(overWidget);
+      const newIndex = visibleWidgets.indexOf(overId as WidgetId);
+      if (oldIndex === -1 || newIndex === -1) return;
       const newOrder = arrayMove(visibleWidgets, oldIndex, newIndex);
       const fullLayout = [...newOrder, ...hiddenWidgets];
       savePrefs.mutate({ widget_layout: fullLayout });
@@ -253,26 +271,18 @@ const Index = () => {
 
   const renderTwoColumnEditing = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pl-8">
-      {/* Left column */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Left Column</p>
-        <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
-          {leftColumn.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
-          )}
-          {leftColumn.map((wId) => renderEditCard(wId))}
-        </div>
-      </div>
-      {/* Right column */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Right Column</p>
-        <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
-          {rightColumn.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
-          )}
-          {rightColumn.map((wId) => renderEditCard(wId))}
-        </div>
-      </div>
+      <DroppableColumn id="col-left" label="Left Column">
+        {leftColumn.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
+        )}
+        {leftColumn.map((wId) => renderEditCard(wId))}
+      </DroppableColumn>
+      <DroppableColumn id="col-right" label="Right Column">
+        {rightColumn.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
+        )}
+        {rightColumn.map((wId) => renderEditCard(wId))}
+      </DroppableColumn>
     </div>
   );
 
