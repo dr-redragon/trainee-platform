@@ -302,18 +302,7 @@ const SpecialtyDetail = () => {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {contacts.map((c) => (
-                  <ContactCard
-                    key={c.id}
-                    contact={{
-                      id: c.id,
-                      name: c.name,
-                      role: c.role,
-                      organisation: c.organisation,
-                      email: c.email,
-                      phone: c.phone ?? undefined,
-                      category: c.category,
-                    }}
-                  />
+                  <ContactCard key={c.id} contact={c} />
                 ))}
               </div>
             )}
