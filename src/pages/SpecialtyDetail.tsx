@@ -436,15 +436,21 @@ const SpecialtyDetail = () => {
 
                     {grouped.map((group) => (
                       <SubheadingGroup key={group.name} name={group.name} resourceIds={group.resources.map((r) => r.id)} canManage={!!canManage}>
-                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, group.resources)}>
-                          <SortableContext items={group.resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-                            <div className="space-y-2">
-                              {group.resources.map((r) => (
-                                <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={allSubheadings} />
-                              ))}
-                            </div>
-                          </SortableContext>
-                        </DndContext>
+                        {group.resources.length === 0 ? (
+                          <div className="flex items-center justify-center py-6 text-xs text-muted-foreground border border-dashed rounded-md">
+                            No resources yet — use "Add Resource" and select this subheading
+                          </div>
+                        ) : (
+                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, group.resources)}>
+                            <SortableContext items={group.resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+                              <div className="space-y-2">
+                                {group.resources.map((r) => (
+                                  <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={allSubheadings} />
+                                ))}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
+                        )}
                       </SubheadingGroup>
                     ))}
                   </div>
