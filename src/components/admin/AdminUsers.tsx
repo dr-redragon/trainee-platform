@@ -399,7 +399,7 @@ export function AdminUsers() {
                     <TableCell className="text-muted-foreground text-sm">{p.email}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={role === "admin" ? "destructive" : role === "facilitator" ? "default" : "secondary"}
+                        variant={role === "super_admin" ? "destructive" : role === "admin" ? "destructive" : role === "facilitator" ? "default" : "secondary"}
                         className="text-xs gap-1"
                       >
                         <cfg.icon className="h-3 w-3" /> {cfg.label}
