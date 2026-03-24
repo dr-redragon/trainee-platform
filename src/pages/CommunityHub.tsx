@@ -45,7 +45,7 @@ const CommunityHub = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+      <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
             <MessageSquare className="h-5 w-5 text-primary" />
@@ -75,7 +75,7 @@ const CommunityHub = () => {
                     <h2 className="font-semibold text-sm text-foreground">{parent.short_name}</h2>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                     {allSpecs.map((spec) => {
                       const SIcon = getIcon(spec.icon_name);
                       const sColor = spec.color ?? "174 60% 40%";
