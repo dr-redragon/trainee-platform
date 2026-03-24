@@ -125,12 +125,25 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
               </video>
             </div>
           ) : viewerUrl ? (
-            <iframe
-              src={viewerUrl}
-              className="w-full h-full border-0"
-              title={resource.title}
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-            />
+            viewerUrl.type === "pdf" ? (
+              <object
+                data={viewerUrl.url}
+                type="application/pdf"
+                className="w-full h-full"
+              >
+                <iframe
+                  src={`https://docs.google.com/gview?url=${encodeURIComponent(viewerUrl.url)}&embedded=true`}
+                  className="w-full h-full border-0"
+                  title={resource.title}
+                />
+              </object>
+            ) : (
+              <iframe
+                src={viewerUrl.url}
+                className="w-full h-full border-0"
+                title={resource.title}
+              />
+            )
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
               <AlertTriangle className="h-10 w-10 opacity-40" />
