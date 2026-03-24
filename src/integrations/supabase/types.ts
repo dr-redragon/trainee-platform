@@ -155,6 +155,7 @@ export type Database = {
       }
       dashboard_preferences: {
         Row: {
+          columns: number
           created_at: string
           hidden_widgets: Json
           id: string
@@ -163,6 +164,7 @@ export type Database = {
           widget_layout: Json
         }
         Insert: {
+          columns?: number
           created_at?: string
           hidden_widgets?: Json
           id?: string
@@ -171,6 +173,7 @@ export type Database = {
           widget_layout?: Json
         }
         Update: {
+          columns?: number
           created_at?: string
           hidden_widgets?: Json
           id?: string

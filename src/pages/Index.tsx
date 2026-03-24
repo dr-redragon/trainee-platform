@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Clock, Megaphone, FileText, Video, LinkIcon, BookOpen, CheckSquare,
-  FolderOpen, ChevronRight, Settings2, GripVertical, Eye, EyeOff, X,
+  FolderOpen, ChevronRight, Settings2, GripVertical, Eye, EyeOff, X, Columns2, Rows3,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,7 +65,7 @@ function SortableWidget({ id, children, isEditing }: { id: string; children: Rea
 const Index = () => {
   const { data: user } = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
-  const { layout, hiddenWidgets, savePrefs } = useDashboardPreferences();
+  const { layout, hiddenWidgets, columns, savePrefs } = useDashboardPreferences();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -302,8 +302,28 @@ const Index = () => {
         {/* Widget visibility toggles when editing */}
         {isEditing && (
           <Card className="border-primary/20 bg-primary/5 animate-fade-in">
-            <CardContent className="p-4">
-              <p className="text-sm font-medium mb-3">Toggle widgets on or off, and drag to reorder:</p>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Toggle widgets on or off, and drag to reorder:</p>
+                <div className="flex items-center gap-1 border rounded-md p-0.5">
+                  <Button
+                    variant={columns === 1 ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-xs"
+                    onClick={() => savePrefs.mutate({ columns: 1 })}
+                  >
+                    <Rows3 className="h-3.5 w-3.5" /> 1 Column
+                  </Button>
+                  <Button
+                    variant={columns === 2 ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-xs"
+                    onClick={() => savePrefs.mutate({ columns: 2 })}
+                  >
+                    <Columns2 className="h-3.5 w-3.5" /> 2 Columns
+                  </Button>
+                </div>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {(Object.keys(WIDGET_LABELS) as WidgetId[]).map((wId) => {
                   const isHidden = hiddenWidgets.includes(wId);
@@ -328,7 +348,7 @@ const Index = () => {
         {/* Sortable widgets */}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={visibleWidgets} strategy={verticalListSortingStrategy}>
-            <div className={`space-y-${isEditing ? "2" : "6"} ${isEditing ? "pl-8" : ""}`}>
+            <div className={`${isEditing ? "space-y-2 pl-8" : columns === 2 ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : "space-y-6"}`}>
               {visibleWidgets.map((widgetId) => {
                 if (isEditing) {
                   return (
