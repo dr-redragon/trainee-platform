@@ -1,4 +1,5 @@
-import { useParams } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -22,8 +23,16 @@ import type { Tables } from "@/integrations/supabase/types";
 
 const SpecialtyDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { data: canManage } = useCanManageSpecialty(id);
+  const discussionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (location.hash === "#discussion" && discussionRef.current) {
+      setTimeout(() => discussionRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
+    }
+  }, [location.hash]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -149,7 +158,7 @@ const SpecialtyDetail = () => {
 
   const Icon = getIcon(specialty.icon_name);
   const color = specialty.color ?? "174 60% 40%";
-  const tabNames = [...(subsections?.map((s) => s.name) ?? []), "Key Contacts", "Discussion"];
+  const tabNames = [...(subsections?.map((s) => s.name) ?? []), "Key Contacts"];
   const defaultTab = subsections?.[0]?.name ?? "Key Contacts";
 
   return (
@@ -180,7 +189,6 @@ const SpecialtyDetail = () => {
             {tabNames.map((tab) => (
               <TabsTrigger key={tab} value={tab} className="text-xs whitespace-nowrap">
                 {tab === "Key Contacts" && <Users className="h-3 w-3 mr-1" />}
-                {tab === "Discussion" && <MessageSquare className="h-3 w-3 mr-1" />}
                 {tab}
               </TabsTrigger>
             ))}
@@ -258,11 +266,16 @@ const SpecialtyDetail = () => {
             )}
           </TabsContent>
 
-          {/* Discussion tab */}
-          <TabsContent value="Discussion" className="mt-4">
-            <DiscussionBoard specialtyId={id!} />
-          </TabsContent>
         </Tabs>
+
+        {/* Discussion Board - always visible at bottom */}
+        <div ref={discussionRef} className="pt-6 border-t">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-lg font-semibold font-display">Discussion</h2>
+          </div>
+          <DiscussionBoard specialtyId={id!} />
+        </div>
       </div>
     </DashboardLayout>
   );
