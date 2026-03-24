@@ -123,6 +123,7 @@ const iconMap: Record<string, LucideIcon> = {
   // ── Additional ──
   AirVent,    // lungs / respiratory
   UserCog,    // elderly / geriatrics
+  Tangent,    // gut / gastroenterology (winding tube shape)
 };
 
 // Remove duplicate aliases
