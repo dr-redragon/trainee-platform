@@ -15,6 +15,7 @@ interface EmailPayload {
   applicant_name: string;
   specialty_name?: string;
   specialty_id?: string;
+  deanery_id?: string;
   training_grade?: string;
   review_note?: string;
 }
@@ -221,6 +222,17 @@ Deno.serve(async (req) => {
         });
         if (assignError && !assignError.message?.includes("duplicate")) {
           console.error("Failed to assign specialty:", assignError);
+        }
+      }
+
+      // 2b. Update profile with deanery_id if provided
+      if (userId && payload.deanery_id) {
+        const { error: deaneryError } = await supabaseAdmin
+          .from("profiles")
+          .update({ deanery_id: payload.deanery_id })
+          .eq("user_id", userId);
+        if (deaneryError) {
+          console.error("Failed to set deanery on profile:", deaneryError);
         }
       }
 
