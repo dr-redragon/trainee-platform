@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { ContactCard } from "@/components/ContactCard";
 import { DiscussionBoard } from "@/components/DiscussionBoard";
+import { SpecialtyNoticeBoard } from "@/components/SpecialtyNoticeBoard";
 import { ResourceCard } from "@/components/ResourceCard";
 import { AddResourceDialog } from "@/components/AddResourceDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -182,6 +183,9 @@ const SpecialtyDetail = () => {
             </Badge>
           )}
         </div>
+
+        {/* Notice Board */}
+        <SpecialtyNoticeBoard specialtyId={id!} canManage={!!canManage} />
 
         {/* Tabs */}
         <Tabs defaultValue={defaultTab} className="w-full">
