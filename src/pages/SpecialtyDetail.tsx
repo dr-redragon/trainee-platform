@@ -30,7 +30,7 @@ import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { SortableContext, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { SortableTabTrigger } from "@/components/SortableTabTrigger";
 import type { Tables } from "@/integrations/supabase/types";
 
