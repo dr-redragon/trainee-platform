@@ -11,7 +11,17 @@ import { AddResourceDialog } from "@/components/AddResourceDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, MessageSquare, FolderOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { SubheadingGroup } from "@/components/SubheadingGroup";
 import { toast } from "sonner";
 import { useCanManageSpecialty } from "@/hooks/useUserRole";
@@ -34,6 +44,15 @@ const SpecialtyDetail = () => {
 
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
+  // Subsection management state
+  const [addSubOpen, setAddSubOpen] = useState(false);
+  const [newSubName, setNewSubName] = useState("");
+  const [renameSubId, setRenameSubId] = useState<string | null>(null);
+  const [renameSubName, setRenameSubName] = useState("");
+  const [deleteSubId, setDeleteSubId] = useState<string | null>(null);
+  const [deleteAction, setDeleteAction] = useState<"move" | "delete">("move");
+  const [moveTargetId, setMoveTargetId] = useState<string>("");
+
   useEffect(() => {
     if (location.hash === "#discussion" && discussionRef.current) {
       setTimeout(() => discussionRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
@@ -48,7 +67,6 @@ const SpecialtyDetail = () => {
     useSensor(KeyboardSensor)
   );
 
-  // Fetch specialty from DB
   const { data: specialty, isLoading: specLoading } = useQuery({
     queryKey: ["specialty", id],
     queryFn: async () => {
@@ -63,7 +81,6 @@ const SpecialtyDetail = () => {
     enabled: !!id,
   });
 
-  // Fetch subsections
   const { data: subsections } = useQuery({
     queryKey: ["subsections", id],
     queryFn: async () => {
@@ -78,7 +95,6 @@ const SpecialtyDetail = () => {
     enabled: !!id,
   });
 
-  // Set active tab from subsection query param
   useEffect(() => {
     const subsectionId = searchParams.get("subsection");
     if (subsectionId && subsections) {
@@ -87,7 +103,6 @@ const SpecialtyDetail = () => {
     }
   }, [searchParams, subsections]);
 
-  // Fetch all resources for this specialty's subsections
   const subsectionIds = subsections?.map((s) => s.id) ?? [];
   const { data: resources } = useQuery({
     queryKey: ["resources", id, subsectionIds],
@@ -104,7 +119,6 @@ const SpecialtyDetail = () => {
     enabled: subsectionIds.length > 0,
   });
 
-  // Contacts for this specialty
   const { data: contacts } = useQuery({
     queryKey: ["contacts", id],
     queryFn: async () => {
@@ -149,6 +163,72 @@ const SpecialtyDetail = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subsections", id] }),
   });
 
+  const addSubsection = useMutation({
+    mutationFn: async (name: string) => {
+      const nextOrder = (subsections?.length ?? 0);
+      const { error } = await supabase.from("subsections").insert({
+        name,
+        specialty_id: id!,
+        sort_order: nextOrder,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Section added");
+      queryClient.invalidateQueries({ queryKey: ["subsections", id] });
+      setAddSubOpen(false);
+      setNewSubName("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const renameSubsection = useMutation({
+    mutationFn: async ({ subId, name }: { subId: string; name: string }) => {
+      const { error } = await supabase.from("subsections").update({ name }).eq("id", subId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { name }) => {
+      toast.success("Section renamed");
+      queryClient.invalidateQueries({ queryKey: ["subsections", id] });
+      if (renameSubId && subsections?.find((s) => s.id === renameSubId)?.name === activeTab) {
+        setActiveTab(name);
+      }
+      setRenameSubId(null);
+      setRenameSubName("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteSubsection = useMutation({
+    mutationFn: async ({ subId, action, targetId }: { subId: string; action: "move" | "delete"; targetId?: string }) => {
+      if (action === "move" && targetId) {
+        const { error: moveErr } = await supabase
+          .from("resources")
+          .update({ subsection_id: targetId })
+          .eq("subsection_id", subId);
+        if (moveErr) throw moveErr;
+      } else {
+        const { error: delResErr } = await supabase
+          .from("resources")
+          .delete()
+          .eq("subsection_id", subId);
+        if (delResErr) throw delResErr;
+      }
+      const { error } = await supabase.from("subsections").delete().eq("id", subId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Section deleted");
+      queryClient.invalidateQueries({ queryKey: ["subsections", id] });
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      setDeleteSubId(null);
+      setDeleteAction("move");
+      setMoveTargetId("");
+      setActiveTab(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const handleSubsectionDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id || !subsections) return;
@@ -167,7 +247,6 @@ const SpecialtyDetail = () => {
     const newIndex = subsectionResources.findIndex((r) => r.id === over.id);
     const reordered = arrayMove(subsectionResources, oldIndex, newIndex);
     const updates = reordered.map((r, i) => ({ id: r.id, sort_order: i }));
-    // Optimistic update
     queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
       if (!old) return old;
       const otherResources = old.filter((r) => r.subsection_id !== subsectionResources[0]?.subsection_id);
@@ -175,6 +254,12 @@ const SpecialtyDetail = () => {
     });
     reorderResources.mutate(updates);
   };
+
+  const deleteSubData = deleteSubId ? subsections?.find((s) => s.id === deleteSubId) : null;
+  const deleteSubResourceCount = deleteSubId
+    ? (resources ?? []).filter((r) => r.subsection_id === deleteSubId).length
+    : 0;
+  const otherSubsections = subsections?.filter((s) => s.id !== deleteSubId) ?? [];
 
   if (specLoading) {
     return (
@@ -196,13 +281,11 @@ const SpecialtyDetail = () => {
 
   const Icon = getIcon(specialty.icon_name);
   const color = specialty.color ?? "174 60% 40%";
-  const tabNames = [...(subsections?.map((s) => s.name) ?? []), "Key Contacts"];
   const defaultTab = subsections?.[0]?.name ?? "Key Contacts";
 
   return (
     <DashboardLayout>
       <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
-        {/* Header */}
         <div className="flex items-center gap-4">
           <div
             className="flex h-12 w-12 items-center justify-center rounded-xl"
@@ -221,47 +304,54 @@ const SpecialtyDetail = () => {
           )}
         </div>
 
-        {/* Notice Board */}
         <SpecialtyNoticeBoard specialtyId={id!} canManage={!!canManage} />
 
-        {/* Tabs */}
         <Tabs value={activeTab ?? defaultTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full justify-start overflow-x-auto bg-secondary/50 p-1">
-            {canManage && subsections?.length ? (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSubsectionDragEnd}>
-                <SortableContext items={subsections.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
-                  {subsections.map((sub) => (
-                    <SortableTabTrigger key={sub.id} id={sub.id} value={sub.name} canDrag>
-                      {sub.name}
-                    </SortableTabTrigger>
-                  ))}
-                </SortableContext>
-              </DndContext>
-            ) : (
-              subsections?.map((sub) => (
-                <TabsTrigger key={sub.id} value={sub.name} className="text-xs whitespace-nowrap">
-                  {sub.name}
-                </TabsTrigger>
-              ))
+          <div className="flex items-center gap-2">
+            <TabsList className="flex-1 justify-start overflow-x-auto bg-secondary/50 p-1">
+              {canManage && subsections?.length ? (
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSubsectionDragEnd}>
+                  <SortableContext items={subsections.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
+                    {subsections.map((sub) => (
+                      <SortableTabTrigger key={sub.id} id={sub.id} value={sub.name} canDrag>
+                        {sub.name}
+                      </SortableTabTrigger>
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                subsections?.map((sub) => (
+                  <TabsTrigger key={sub.id} value={sub.name} className="text-xs whitespace-nowrap">
+                    {sub.name}
+                  </TabsTrigger>
+                ))
+              )}
+              <TabsTrigger value="Key Contacts" className="text-xs whitespace-nowrap">
+                <Users className="h-3 w-3 mr-1" />
+                Key Contacts
+              </TabsTrigger>
+            </TabsList>
+            {canManage && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1 text-xs h-8"
+                onClick={() => setAddSubOpen(true)}
+              >
+                <Plus className="h-3.5 w-3.5" /> Section
+              </Button>
             )}
-            <TabsTrigger value="Key Contacts" className="text-xs whitespace-nowrap">
-              <Users className="h-3 w-3 mr-1" />
-              Key Contacts
-            </TabsTrigger>
-          </TabsList>
+          </div>
 
-          {/* Resource subsection tabs */}
           {subsections?.map((sub) => {
             const subResources = (resources ?? [])
               .filter((r) => r.subsection_id === sub.id)
               .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
-            // Get unique subheadings
             const existingSubheadings = [...new Set(
               subResources.map((r) => (r as any).subheading).filter(Boolean) as string[]
             )];
 
-            // Group resources: ungrouped first, then by subheading
             const ungrouped = subResources.filter((r) => !(r as any).subheading);
             const grouped = existingSubheadings.map((sh) => ({
               name: sh,
@@ -272,9 +362,39 @@ const SpecialtyDetail = () => {
               <TabsContent key={sub.id} value={sub.name} className="mt-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-sm">{sub.name}</h3>
-                  {canManage && (
-                    <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={existingSubheadings} />
-                  )}
+                  <div className="flex items-center gap-1">
+                    {canManage && (
+                      <>
+                        <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={existingSubheadings} />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setRenameSubId(sub.id);
+                              setRenameSubName(sub.name);
+                            }}>
+                              <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Section
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => {
+                                setDeleteSubId(sub.id);
+                                setDeleteAction(otherSubsections.length > 0 ? "move" : "delete");
+                                const others = subsections?.filter((s) => s.id !== sub.id) ?? [];
+                                setMoveTargetId(others[0]?.id ?? "");
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Section
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {subResources.length === 0 ? (
@@ -287,52 +407,25 @@ const SpecialtyDetail = () => {
                   </Card>
                 ) : (
                   <div className="space-y-4">
-                    {/* Ungrouped resources */}
                     {ungrouped.length > 0 && (
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={(e) => handleDragEnd(e, ungrouped)}
-                      >
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, ungrouped)}>
                         <SortableContext items={ungrouped.map((r) => r.id)} strategy={verticalListSortingStrategy}>
                           <div className="space-y-2">
                             {ungrouped.map((r) => (
-                              <ResourceCard
-                                key={r.id}
-                                resource={r}
-                                canManage={!!canManage}
-                                onDelete={(rid) => deleteResource.mutate(rid)}
-                                existingSubheadings={existingSubheadings}
-                              />
+                              <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={existingSubheadings} />
                             ))}
                           </div>
                         </SortableContext>
                       </DndContext>
                     )}
 
-                    {/* Grouped resources by subheading */}
                     {grouped.map((group) => (
-                      <SubheadingGroup
-                        key={group.name}
-                        name={group.name}
-                        resourceIds={group.resources.map((r) => r.id)}
-                        canManage={!!canManage}
-                      >
-                        <DndContext
-                          sensors={sensors}
-                          collisionDetection={closestCenter}
-                          onDragEnd={(e) => handleDragEnd(e, group.resources)}
-                        >
+                      <SubheadingGroup key={group.name} name={group.name} resourceIds={group.resources.map((r) => r.id)} canManage={!!canManage}>
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, group.resources)}>
                           <SortableContext items={group.resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
                             <div className="space-y-2">
                               {group.resources.map((r) => (
-                                <ResourceCard
-                                  key={r.id}
-                                  resource={r}
-                                  canManage={!!canManage}
-                                  onDelete={(rid) => deleteResource.mutate(rid)}
-                                  existingSubheadings={existingSubheadings}
-                                />
+                                <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={existingSubheadings} />
                               ))}
                             </div>
                           </SortableContext>
@@ -345,7 +438,6 @@ const SpecialtyDetail = () => {
             );
           })}
 
-          {/* Key Contacts tab */}
           <TabsContent value="Key Contacts" className="mt-4 space-y-4">
             <h3 className="font-semibold text-sm">Key Contacts — {specialty.short_name}</h3>
             {!contacts?.length ? (
@@ -358,10 +450,8 @@ const SpecialtyDetail = () => {
               </div>
             )}
           </TabsContent>
-
         </Tabs>
 
-        {/* Discussion Board - always visible at bottom */}
         <div ref={discussionRef} className="pt-6 border-t">
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="h-5 w-5 text-muted-foreground" />
@@ -370,6 +460,126 @@ const SpecialtyDetail = () => {
           <DiscussionBoard specialtyId={id!} />
         </div>
       </div>
+
+      {/* Add Section Dialog */}
+      <Dialog open={addSubOpen} onOpenChange={setAddSubOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Section</DialogTitle>
+            <DialogDescription>Create a new section tab for this specialty.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1.5">
+              <Label>Section Name</Label>
+              <Input
+                value={newSubName}
+                onChange={(e) => setNewSubName(e.target.value)}
+                placeholder="e.g. Training Resources"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newSubName.trim()) addSubsection.mutate(newSubName.trim());
+                }}
+              />
+            </div>
+            <Button className="w-full" disabled={!newSubName.trim() || addSubsection.isPending} onClick={() => addSubsection.mutate(newSubName.trim())}>
+              {addSubsection.isPending ? "Adding…" : "Add Section"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Section Dialog */}
+      <Dialog open={!!renameSubId} onOpenChange={(o) => { if (!o) { setRenameSubId(null); setRenameSubName(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Section</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1.5">
+              <Label>New Name</Label>
+              <Input
+                value={renameSubName}
+                onChange={(e) => setRenameSubName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && renameSubName.trim() && renameSubId)
+                    renameSubsection.mutate({ subId: renameSubId, name: renameSubName.trim() });
+                }}
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={!renameSubName.trim() || renameSubsection.isPending}
+              onClick={() => { if (renameSubId) renameSubsection.mutate({ subId: renameSubId, name: renameSubName.trim() }); }}
+            >
+              {renameSubsection.isPending ? "Saving…" : "Rename"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Section Dialog */}
+      <Dialog open={!!deleteSubId} onOpenChange={(o) => { if (!o) setDeleteSubId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete "{deleteSubData?.name}"</DialogTitle>
+            <DialogDescription>
+              {deleteSubResourceCount > 0
+                ? `This section has ${deleteSubResourceCount} resource${deleteSubResourceCount !== 1 ? "s" : ""}. Choose what to do with them.`
+                : "This section has no resources and will be removed."}
+            </DialogDescription>
+          </DialogHeader>
+          {deleteSubResourceCount > 0 && (
+            <div className="space-y-3 pt-2">
+              <div className="space-y-1.5">
+                <Label>What should happen to the resources?</Label>
+                <Select value={deleteAction} onValueChange={(v) => setDeleteAction(v as "move" | "delete")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {otherSubsections.length > 0 && (
+                      <SelectItem value="move">Move to another section</SelectItem>
+                    )}
+                    <SelectItem value="delete">Delete all resources</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {deleteAction === "move" && otherSubsections.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label>Move to</Label>
+                  <Select value={moveTargetId} onValueChange={setMoveTargetId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select section" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {otherSubsections.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteSubId(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={deleteSubsection.isPending || (deleteSubResourceCount > 0 && deleteAction === "move" && !moveTargetId)}
+              onClick={() => {
+                if (deleteSubId) {
+                  deleteSubsection.mutate({
+                    subId: deleteSubId,
+                    action: deleteSubResourceCount > 0 ? deleteAction : "delete",
+                    targetId: deleteAction === "move" ? moveTargetId : undefined,
+                  });
+                }
+              }}
+            >
+              {deleteSubsection.isPending ? "Deleting…" : "Delete Section"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
