@@ -180,31 +180,48 @@ Deno.serve(async (req) => {
 
     if (type === "approved") {
       const supabaseAdmin = getSupabaseAdmin();
-
-      // 1. Create user account with a random temporary password
-      const tempPassword = crypto.randomUUID() + "!Aa1";
       const nameParts = applicant_name.split(" ");
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
-      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email: applicant_email,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: { first_name: firstName, last_name: lastName },
-      });
+      let userId: string | undefined;
 
-      if (createError) {
-        console.error("Failed to create user:", createError);
-        throw new Error(`Failed to create user account: ${createError.message}`);
+      // 1. Check if user already exists
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = existingUsers?.users?.find(
+        (u: any) => u.email?.toLowerCase() === applicant_email.toLowerCase()
+      );
+
+      if (existingUser) {
+        console.log(`User ${applicant_email} already exists, skipping creation.`);
+        userId = existingUser.id;
+      } else {
+        // Create new user account
+        const tempPassword = crypto.randomUUID() + "!Aa1";
+        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email: applicant_email,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: { first_name: firstName, last_name: lastName },
+        });
+
+        if (createError) {
+          console.error("Failed to create user:", createError);
+          throw new Error(`Failed to create user account: ${createError.message}`);
+        }
+        userId = newUser?.user?.id;
       }
 
       // 2. Assign trainee to requested specialty if one was specified
-      if (newUser?.user && payload.specialty_id) {
-        await supabaseAdmin.from("trainee_specialties").insert({
-          user_id: newUser.user.id,
+      if (userId && payload.specialty_id) {
+        // Use upsert-like approach: ignore if already assigned
+        const { error: assignError } = await supabaseAdmin.from("trainee_specialties").insert({
+          user_id: userId,
           specialty_id: payload.specialty_id,
         });
+        if (assignError && !assignError.message?.includes("duplicate")) {
+          console.error("Failed to assign specialty:", assignError);
+        }
       }
 
       // 3. Generate a password reset link so user can set their own password
@@ -213,25 +230,17 @@ Deno.serve(async (req) => {
         email: applicant_email,
       });
 
-      if (linkError || !linkData) {
-        console.error("Failed to generate recovery link:", linkError);
-        // Account was created, fall back to telling user to use forgot password
-        await sendEmail(
-          applicant_email,
-          "Access Approved — HST Training Hub",
-          approvedHtml(applicant_name, "#"),
-        );
-      } else {
-        // The hashed_token is embedded in the action_link
-        const resetLink = linkData.properties?.action_link || "#";
-        await sendEmail(
-          applicant_email,
-          "Access Approved — HST Training Hub",
-          approvedHtml(applicant_name, resetLink),
-        );
-      }
+      const resetLink = (!linkError && linkData?.properties?.action_link)
+        ? linkData.properties.action_link
+        : "#";
 
-      return new Response(JSON.stringify({ success: true, user_id: newUser?.user?.id }), {
+      await sendEmail(
+        applicant_email,
+        "Access Approved — HST Training Hub",
+        approvedHtml(applicant_name, resetLink),
+      );
+
+      return new Response(JSON.stringify({ success: true, user_id: userId }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
