@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  LayoutDashboard, Users, Settings, Search, ChevronDown,
+  LayoutDashboard, Users, Search, ChevronDown,
   BookOpen, LogOut, User, Shield
 } from "lucide-react";
-import { specialties } from "@/lib/specialties";
+import { getIcon } from "@/lib/iconMap";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -20,6 +23,17 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const [specOpen, setSpecOpen] = useState(true);
+  const { data: role } = useUserRole();
+
+  // Fetch specialties from DB (RLS enforced)
+  const { data: specialties } = useQuery({
+    queryKey: ["sidebar-specialties"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("specialties").select("id, short_name, icon_name, color").order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -40,7 +54,6 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-3">
-        {/* Search */}
         {!collapsed && (
           <div className="px-2 mb-3">
             <div className="flex items-center gap-2 rounded-md bg-sidebar-accent px-3 py-2 text-xs text-sidebar-muted">
@@ -50,7 +63,6 @@ export function AppSidebar() {
           </div>
         )}
 
-        {/* Main nav */}
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -66,7 +78,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Specialties */}
         <SidebarGroup>
           <Collapsible open={specOpen} onOpenChange={setSpecOpen}>
             <CollapsibleTrigger className="w-full">
@@ -78,27 +89,29 @@ export function AppSidebar() {
             <CollapsibleContent>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {specialties.map((s) => (
-                    <SidebarMenuItem key={s.id}>
-                      <SidebarMenuButton asChild>
-                        <NavLink
-                          to={`/specialty/${s.id}`}
-                          activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                          className="text-xs"
-                        >
-                          <s.icon className="h-3.5 w-3.5" />
-                          {!collapsed && <span>{s.shortName}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+                  {specialties?.map((s) => {
+                    const SIcon = getIcon(s.icon_name);
+                    return (
+                      <SidebarMenuItem key={s.id}>
+                        <SidebarMenuButton asChild>
+                          <NavLink
+                            to={`/specialty/${s.id}`}
+                            activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                            className="text-xs"
+                          >
+                            <SIcon className="h-3.5 w-3.5" />
+                            {!collapsed && <span>{s.short_name}</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </CollapsibleContent>
           </Collapsible>
         </SidebarGroup>
 
-        {/* Other */}
         <SidebarGroup>
           <SidebarGroupLabel>Account</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -119,14 +132,16 @@ export function AppSidebar() {
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink to="/admin" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                    <Shield className="h-4 w-4" />
-                    {!collapsed && <span>Admin Panel</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {role === "admin" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/admin" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                      <Shield className="h-4 w-4" />
+                      {!collapsed && <span>Admin Panel</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

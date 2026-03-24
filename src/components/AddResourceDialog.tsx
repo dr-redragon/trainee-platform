@@ -1,0 +1,181 @@
+import { useState, useRef } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Upload, FileUp } from "lucide-react";
+import { toast } from "sonner";
+import { Constants } from "@/integrations/supabase/types";
+
+interface AddResourceDialogProps {
+  subsectionId: string;
+  specialtyId: string;
+}
+
+export function AddResourceDialog({ subsectionId, specialtyId }: AddResourceDialogProps) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [resourceType, setResourceType] = useState<string>("document");
+  const [externalUrl, setExternalUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files[0];
+    if (f) {
+      setFile(f);
+      if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
+      // auto-detect type
+      if (f.type === "application/pdf") setResourceType("pdf");
+      else if (f.type.startsWith("video/")) setResourceType("video");
+      else if (f.name.endsWith(".pptx") || f.name.endsWith(".ppt")) setResourceType("presentation");
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      setFile(f);
+      if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
+      if (f.type === "application/pdf") setResourceType("pdf");
+      else if (f.type.startsWith("video/")) setResourceType("video");
+    }
+  };
+
+  const addResource = useMutation({
+    mutationFn: async () => {
+      setUploading(true);
+      let fileUrl: string | null = null;
+
+      if (file) {
+        const ext = file.name.split(".").pop();
+        const path = `${specialtyId}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
+        if (uploadErr) throw uploadErr;
+        const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
+        fileUrl = urlData.publicUrl;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      // Get max sort_order
+      const { data: existing } = await supabase
+        .from("resources")
+        .select("sort_order")
+        .eq("subsection_id", subsectionId)
+        .order("sort_order", { ascending: false })
+        .limit(1);
+      const nextOrder = ((existing?.[0]?.sort_order ?? -1) + 1);
+
+      const { error } = await supabase.from("resources").insert({
+        title: title.trim(),
+        description: description.trim() || null,
+        resource_type: resourceType as any,
+        subsection_id: subsectionId,
+        external_url: externalUrl.trim() || null,
+        file_url: fileUrl,
+        added_by: user?.id ?? null,
+        sort_order: nextOrder,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Resource added");
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      resetForm();
+    },
+    onError: (e: Error) => toast.error(e.message),
+    onSettled: () => setUploading(false),
+  });
+
+  const resetForm = () => {
+    setOpen(false);
+    setTitle("");
+    setDescription("");
+    setResourceType("document");
+    setExternalUrl("");
+    setFile(null);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="text-xs gap-1.5">
+          <Plus className="h-3.5 w-3.5" /> Add Resource
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Add Resource</DialogTitle></DialogHeader>
+        <div className="space-y-4 pt-2">
+          {/* Drag-and-drop zone */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => fileRef.current?.click()}
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+              dragOver ? "border-accent bg-accent/5" : file ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/40"
+            }`}
+          >
+            <input ref={fileRef} type="file" className="hidden" onChange={handleFileChange} />
+            {file ? (
+              <div className="flex items-center justify-center gap-2">
+                <FileUp className="h-5 w-5 text-accent" />
+                <span className="text-sm font-medium truncate max-w-[200px]">{file.name}</span>
+                <button className="text-xs text-destructive hover:underline" onClick={(e) => { e.stopPropagation(); setFile(null); }}>Remove</button>
+              </div>
+            ) : (
+              <>
+                <Upload className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Drag & drop a file here, or click to browse</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">PDF, DOCX, PPTX, MP4, etc.</p>
+              </>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Title</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Resource title" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Description (optional)</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Brief description…" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Type</Label>
+              <Select value={resourceType} onValueChange={setResourceType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Constants.public.Enums.resource_type.map((t) => (
+                    <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>External URL (optional)</Label>
+              <Input value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://…" />
+            </div>
+          </div>
+          <Button
+            className="w-full"
+            onClick={() => addResource.mutate()}
+            disabled={!title.trim() || uploading}
+          >
+            {uploading ? "Uploading…" : "Add Resource"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
