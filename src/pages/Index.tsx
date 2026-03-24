@@ -236,26 +236,22 @@ const Index = () => {
       {/* Left column */}
       <div className="space-y-2">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Left Column</p>
-        <SortableContext items={leftColumn} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
-            {leftColumn.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
-            )}
-            {leftColumn.map((wId) => renderEditCard(wId))}
-          </div>
-        </SortableContext>
+        <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
+          {leftColumn.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
+          )}
+          {leftColumn.map((wId) => renderEditCard(wId))}
+        </div>
       </div>
       {/* Right column */}
       <div className="space-y-2">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Right Column</p>
-        <SortableContext items={rightColumn} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
-            {rightColumn.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
-            )}
-            {rightColumn.map((wId) => renderEditCard(wId))}
-          </div>
-        </SortableContext>
+        <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
+          {rightColumn.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
+          )}
+          {rightColumn.map((wId) => renderEditCard(wId))}
+        </div>
       </div>
     </div>
   );
@@ -379,10 +375,12 @@ const Index = () => {
           onDragEnd={handleDragEnd}
           onDragOver={handleDragOver}
         >
-          {columns === 2
-            ? (isEditing ? renderTwoColumnEditing() : renderTwoColumnView())
-            : renderSingleColumn()
-          }
+          <SortableContext items={visibleWidgets} strategy={verticalListSortingStrategy}>
+            {columns === 2
+              ? (isEditing ? renderTwoColumnEditing() : renderTwoColumnView())
+              : renderSingleColumn()
+            }
+          </SortableContext>
           <DragOverlay>
             {activeId && isEditing ? (
               <Card className="border-dashed border-primary shadow-lg">
