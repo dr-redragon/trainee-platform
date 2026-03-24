@@ -37,6 +37,7 @@ export function AppSidebar() {
       let query = supabase
         .from("specialties")
         .select("id, short_name, icon_name, color, parent_specialty_id, sort_order")
+        .eq("is_active", true)
         .order("sort_order");
       if (activeDeanery) {
         query = query.eq("deanery_id", activeDeanery.id);
