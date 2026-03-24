@@ -57,14 +57,15 @@ const RequestAccess = () => {
     e.preventDefault();
     setSubmitting(true);
 
-    const { error } = await supabase.from("access_requests" as any).insert({
+    const { error } = await supabase.from("access_requests").insert({
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       email: email.trim(),
+      deanery_id: deaneryId || null,
       specialty_id: specialtyId === "none" ? null : specialtyId,
       training_grade: trainingGrade.trim() || null,
       reason: reason.trim() || null,
-    } as any);
+    });
 
     setSubmitting(false);
     if (error) {
@@ -189,9 +190,21 @@ const RequestAccess = () => {
             </div>
 
             <div className="space-y-1.5">
+              <Label>Deanery</Label>
+              <Select value={deaneryId} onValueChange={(v) => { setDeaneryId(v); setSpecialtyId("none"); }}>
+                <SelectTrigger><SelectValue placeholder="Select a deanery" /></SelectTrigger>
+                <SelectContent>
+                  {deaneries?.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
               <Label>Specialty of interest</Label>
-              <Select value={specialtyId} onValueChange={setSpecialtyId}>
-                <SelectTrigger><SelectValue placeholder="Select a specialty" /></SelectTrigger>
+              <Select value={specialtyId} onValueChange={setSpecialtyId} disabled={!deaneryId}>
+                <SelectTrigger><SelectValue placeholder={deaneryId ? "Select a specialty" : "Select a deanery first"} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Not sure / General</SelectItem>
                   {topLevel.map((s) => {
