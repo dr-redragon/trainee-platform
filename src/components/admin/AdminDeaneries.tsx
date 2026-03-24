@@ -150,20 +150,18 @@ export function AdminDeaneries() {
             <Card key={d.id} className={!d.is_active ? "opacity-60" : ""}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                       <Building2 className="h-5 w-5 text-primary" />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-semibold">{d.name}</h4>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-semibold truncate">{d.name}</h4>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         <Badge variant={d.is_active ? "default" : "secondary"} className="text-[10px]">
                           {d.is_active ? "Active" : "Inactive"}
                         </Badge>
+                        <span className="text-xs text-muted-foreground">{d.short_name} · /{d.slug}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {d.short_name} · /{d.slug}
-                      </p>
                     </div>
                   </div>
                   <div className="flex gap-1 shrink-0">
