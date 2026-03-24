@@ -153,6 +153,33 @@ export type Database = {
           },
         ]
       }
+      dashboard_preferences: {
+        Row: {
+          created_at: string
+          hidden_widgets: Json
+          id: string
+          updated_at: string
+          user_id: string
+          widget_layout: Json
+        }
+        Insert: {
+          created_at?: string
+          hidden_widgets?: Json
+          id?: string
+          updated_at?: string
+          user_id: string
+          widget_layout?: Json
+        }
+        Update: {
+          created_at?: string
+          hidden_widgets?: Json
+          id?: string
+          updated_at?: string
+          user_id?: string
+          widget_layout?: Json
+        }
+        Relationships: []
+      }
       discussion_comments: {
         Row: {
           author_id: string
@@ -457,6 +484,35 @@ export type Database = {
           },
         ]
       }
+      starred_contacts: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "starred_contacts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subsections: {
         Row: {
           created_at: string
@@ -538,6 +594,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      watched_discussions: {
+        Row: {
+          created_at: string
+          discussion_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          discussion_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          discussion_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watched_discussions_discussion_id_fkey"
+            columns: ["discussion_id"]
+            isOneToOne: false
+            referencedRelation: "discussions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
