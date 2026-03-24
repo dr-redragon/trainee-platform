@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  BookOpen, Mail, Lock, ArrowRight, Stethoscope,
+  Mail, Lock, ArrowRight, Stethoscope,
   GraduationCap, FolderOpen, Shield, ChevronRight,
 } from "lucide-react";
+import logoWhite from "@/assets/logo-white.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,9 +55,7 @@ const Landing = () => {
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 h-16">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-              <BookOpen className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img src={logoWhite} alt="NW HST Training Hub" className="h-9 w-9 rounded-lg bg-primary p-1" />
             <span className="font-display font-semibold text-lg tracking-tight">HST Training Hub</span>
           </div>
           <div className="flex items-center gap-4">

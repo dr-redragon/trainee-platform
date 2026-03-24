@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BookOpen, Mail, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight } from "lucide-react";
+import logoWhite from "@/assets/logo-white.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,9 +33,7 @@ const Login = () => {
       <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden flex-col justify-between p-12">
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-16">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20">
-              <BookOpen className="h-6 w-6 text-accent" />
-            </div>
+            <img src={logoWhite} alt="NW HST Training Hub" className="h-10 w-10" />
             <h1 className="text-xl font-display font-semibold text-primary-foreground tracking-tight">
               North West HST Training Hub
             </h1>
