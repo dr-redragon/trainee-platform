@@ -62,9 +62,6 @@ const Landing = () => {
             <Link to="/request-access" className="text-sm text-muted-foreground hover:text-accent font-medium transition-colors">
               Request Access
             </Link>
-            <a href="#login" className="text-sm text-accent hover:underline font-medium">
-              Sign In →
-            </a>
           </div>
         </div>
       </header>
