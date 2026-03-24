@@ -46,7 +46,7 @@ import {
   Ratio, Binary, Hash, Percent,
   Shapes, Box, Cylinder, Cone, Triangle,
   Snowflake, Droplet, CloudSun, Sunrise, Sunset,
-  AirVent, UserCog,
+  AirVent, UserCog, Tangent,
   type LucideIcon,
 } from "lucide-react";
 
@@ -123,6 +123,7 @@ const iconMap: Record<string, LucideIcon> = {
   // ── Additional ──
   AirVent,    // lungs / respiratory
   UserCog,    // elderly / geriatrics
+  Tangent,    // gut / gastroenterology (winding tube shape)
 };
 
 // Remove duplicate aliases
