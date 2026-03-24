@@ -487,6 +487,44 @@ export type Database = {
           },
         ]
       }
+      specialty_notices: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          specialty_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          specialty_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          specialty_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specialty_notices_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       starred_contacts: {
         Row: {
           contact_id: string
