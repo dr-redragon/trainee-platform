@@ -5,7 +5,8 @@ import { AdminContent } from "@/components/admin/AdminContent";
 import { AdminContacts } from "@/components/admin/AdminContacts";
 import { AdminAnnouncements } from "@/components/admin/AdminAnnouncements";
 import { AdminAccessRequests } from "@/components/admin/AdminAccessRequests";
-import { Shield, Users, BookOpen, Phone, Megaphone, UserPlus } from "lucide-react";
+import { AdminDeaneries } from "@/components/admin/AdminDeaneries";
+import { Shield, Users, BookOpen, Phone, Megaphone, UserPlus, Building2 } from "lucide-react";
 
 const AdminPanel = () => {
   return (
@@ -38,6 +39,9 @@ const AdminPanel = () => {
             <TabsTrigger value="requests" className="gap-1.5 text-xs">
               <UserPlus className="h-3.5 w-3.5" /> Requests
             </TabsTrigger>
+            <TabsTrigger value="deaneries" className="gap-1.5 text-xs">
+              <Building2 className="h-3.5 w-3.5" /> Deaneries
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="mt-4"><AdminUsers /></TabsContent>
@@ -45,6 +49,7 @@ const AdminPanel = () => {
           <TabsContent value="contacts" className="mt-4"><AdminContacts /></TabsContent>
           <TabsContent value="announcements" className="mt-4"><AdminAnnouncements /></TabsContent>
           <TabsContent value="requests" className="mt-4"><AdminAccessRequests /></TabsContent>
+          <TabsContent value="deaneries" className="mt-4"><AdminDeaneries /></TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>

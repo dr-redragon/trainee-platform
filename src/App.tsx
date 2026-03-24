@@ -13,28 +13,31 @@ import MyProfile from "./pages/MyProfile";
 import CommunityHub from "./pages/CommunityHub";
 import NotFound from "./pages/NotFound";
 import RequestAccess from "./pages/RequestAccess";
+import { DeaneryProvider } from "./contexts/DeaneryContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/dashboard" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/request-access" element={<RequestAccess />} />
-          <Route path="/specialty/:id" element={<SpecialtyDetail />} />
-          
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/profile" element={<MyProfile />} />
-          <Route path="/community" element={<CommunityHub />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <DeaneryProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/dashboard" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/request-access" element={<RequestAccess />} />
+            <Route path="/specialty/:id" element={<SpecialtyDetail />} />
+            
+            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/profile" element={<MyProfile />} />
+            <Route path="/community" element={<CommunityHub />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </DeaneryProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

@@ -6,18 +6,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Users } from "lucide-react";
 import { getIcon } from "@/lib/iconMap";
+import { useDeanery } from "@/contexts/DeaneryContext";
 
 const CommunityHub = () => {
+  const { activeDeanery } = useDeanery();
   const { data: specialties, isLoading } = useQuery({
-    queryKey: ["community-specialties"],
+    queryKey: ["community-specialties", activeDeanery?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("specialties")
         .select("id, name, short_name, icon_name, color, parent_specialty_id, sort_order")
         .order("sort_order");
+      if (activeDeanery) query = query.eq("deanery_id", activeDeanery.id);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!activeDeanery,
   });
 
   // Count discussions per specialty

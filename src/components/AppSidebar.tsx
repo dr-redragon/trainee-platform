@@ -19,6 +19,8 @@ import {
   Collapsible, CollapsibleContent, CollapsibleTrigger
 } from "@/components/ui/collapsible";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { useDeanery } from "@/contexts/DeaneryContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -27,17 +29,23 @@ export function AppSidebar() {
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
   const [searchOpen, setSearchOpen] = useState(false);
   const { data: role } = useUserRole();
+  const { activeDeanery, allDeaneries, setActiveDeaneryId } = useDeanery();
 
   const { data: specialties } = useQuery({
-    queryKey: ["sidebar-specialties"],
+    queryKey: ["sidebar-specialties", activeDeanery?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("specialties")
         .select("id, short_name, icon_name, color, parent_specialty_id, sort_order")
         .order("sort_order");
+      if (activeDeanery) {
+        query = query.eq("deanery_id", activeDeanery.id);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!activeDeanery,
   });
 
   // Separate top-level and children
@@ -52,16 +60,27 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link to="/dashboard" className="flex items-center gap-3">
-          <img src={logoWhite} alt="NW HST Training Hub" className="h-11 w-11" />
+          <img src={logoWhite} alt="HST Training Hub" className="h-11 w-11" />
           {!collapsed && (
             <div>
               <h1 className="text-sm font-semibold font-display text-sidebar-accent-foreground tracking-tight">
-                North West HST Training Hub
+                {activeDeanery?.name ?? ""} HST Training Hub
               </h1>
-              
             </div>
           )}
         </Link>
+        {!collapsed && role === "admin" && allDeaneries.length > 1 && (
+          <Select value={activeDeanery?.id ?? ""} onValueChange={setActiveDeaneryId}>
+            <SelectTrigger className="mt-2 h-7 text-xs bg-sidebar-accent border-sidebar-border">
+              <SelectValue placeholder="Select deanery" />
+            </SelectTrigger>
+            <SelectContent>
+              {allDeaneries.map((d) => (
+                <SelectItem key={d.id} value={d.id} className="text-xs">{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-3">
