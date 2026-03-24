@@ -302,8 +302,28 @@ const Index = () => {
         {/* Widget visibility toggles when editing */}
         {isEditing && (
           <Card className="border-primary/20 bg-primary/5 animate-fade-in">
-            <CardContent className="p-4">
-              <p className="text-sm font-medium mb-3">Toggle widgets on or off, and drag to reorder:</p>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Toggle widgets on or off, and drag to reorder:</p>
+                <div className="flex items-center gap-1 border rounded-md p-0.5">
+                  <Button
+                    variant={columns === 1 ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-xs"
+                    onClick={() => savePrefs.mutate({ columns: 1 })}
+                  >
+                    <Rows3 className="h-3.5 w-3.5" /> 1 Column
+                  </Button>
+                  <Button
+                    variant={columns === 2 ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 px-2 gap-1 text-xs"
+                    onClick={() => savePrefs.mutate({ columns: 2 })}
+                  >
+                    <Columns2 className="h-3.5 w-3.5" /> 2 Columns
+                  </Button>
+                </div>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {(Object.keys(WIDGET_LABELS) as WidgetId[]).map((wId) => {
                   const isHidden = hiddenWidgets.includes(wId);
