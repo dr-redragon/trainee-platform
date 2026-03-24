@@ -1,0 +1,1 @@
+ALTER TABLE public.dashboard_preferences ADD COLUMN IF NOT EXISTS right_column_widgets jsonb NOT NULL DEFAULT '[]'::jsonb;
