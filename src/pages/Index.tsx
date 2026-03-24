@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Clock, Megaphone, FileText, Video, LinkIcon, BookOpen, CheckSquare,
   FolderOpen, ChevronRight, Settings2, GripVertical, Eye, EyeOff, X, Columns2, Rows3,
+  ArrowLeftRight,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -205,17 +206,36 @@ const Index = () => {
     }
   };
 
+  const moveToOtherColumn = (widgetId: WidgetId) => {
+    const inRight = rightColumnWidgets.includes(widgetId);
+    const newRight = inRight
+      ? rightColumnWidgets.filter((w) => w !== widgetId)
+      : [...rightColumnWidgets, widgetId];
+    savePrefs.mutate({ right_column_widgets: newRight });
+  };
+
   const renderEditCard = (widgetId: WidgetId) => (
     <SortableWidget key={widgetId} id={widgetId} isEditing>
       <Card className="border-dashed">
         <CardContent className="flex items-center justify-between p-3">
           <span className="text-sm font-medium">{WIDGET_LABELS[widgetId]}</span>
-          <button
-            onClick={() => toggleWidget(widgetId)}
-            className="h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:scale-110 transition-transform"
-          >
-            <X className="h-3 w-3" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {columns === 2 && (
+              <button
+                onClick={() => moveToOtherColumn(widgetId)}
+                className="h-5 w-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center hover:scale-110 hover:bg-accent/20 hover:text-accent transition-all"
+                title={rightColumnWidgets.includes(widgetId) ? "Move to left column" : "Move to right column"}
+              >
+                <ArrowLeftRight className="h-3 w-3" />
+              </button>
+            )}
+            <button
+              onClick={() => toggleWidget(widgetId)}
+              className="h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:scale-110 transition-transform"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
         </CardContent>
       </Card>
     </SortableWidget>
@@ -236,26 +256,22 @@ const Index = () => {
       {/* Left column */}
       <div className="space-y-2">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Left Column</p>
-        <SortableContext items={leftColumn} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
-            {leftColumn.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
-            )}
-            {leftColumn.map((wId) => renderEditCard(wId))}
-          </div>
-        </SortableContext>
+        <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
+          {leftColumn.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
+          )}
+          {leftColumn.map((wId) => renderEditCard(wId))}
+        </div>
       </div>
       {/* Right column */}
       <div className="space-y-2">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Right Column</p>
-        <SortableContext items={rightColumn} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
-            {rightColumn.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
-            )}
-            {rightColumn.map((wId) => renderEditCard(wId))}
-          </div>
-        </SortableContext>
+        <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
+          {rightColumn.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
+          )}
+          {rightColumn.map((wId) => renderEditCard(wId))}
+        </div>
       </div>
     </div>
   );
@@ -263,24 +279,18 @@ const Index = () => {
   const renderTwoColumnView = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-6">
-        <SortableContext items={leftColumn} strategy={verticalListSortingStrategy}>
-          {leftColumn.map((wId) => renderViewCard(wId))}
-        </SortableContext>
+        {leftColumn.map((wId) => renderViewCard(wId))}
       </div>
       <div className="space-y-6">
-        <SortableContext items={rightColumn} strategy={verticalListSortingStrategy}>
-          {rightColumn.map((wId) => renderViewCard(wId))}
-        </SortableContext>
+        {rightColumn.map((wId) => renderViewCard(wId))}
       </div>
     </div>
   );
 
   const renderSingleColumn = () => (
-    <SortableContext items={visibleWidgets} strategy={verticalListSortingStrategy}>
-      <div className={isEditing ? "space-y-2 pl-8" : "space-y-6"}>
-        {visibleWidgets.map((wId) => isEditing ? renderEditCard(wId) : renderViewCard(wId))}
-      </div>
-    </SortableContext>
+    <div className={isEditing ? "space-y-2 pl-8" : "space-y-6"}>
+      {visibleWidgets.map((wId) => isEditing ? renderEditCard(wId) : renderViewCard(wId))}
+    </div>
   );
 
   return (
@@ -379,10 +389,12 @@ const Index = () => {
           onDragEnd={handleDragEnd}
           onDragOver={handleDragOver}
         >
-          {columns === 2
-            ? (isEditing ? renderTwoColumnEditing() : renderTwoColumnView())
-            : renderSingleColumn()
-          }
+          <SortableContext items={visibleWidgets} strategy={verticalListSortingStrategy}>
+            {columns === 2
+              ? (isEditing ? renderTwoColumnEditing() : renderTwoColumnView())
+              : renderSingleColumn()
+            }
+          </SortableContext>
           <DragOverlay>
             {activeId && isEditing ? (
               <Card className="border-dashed border-primary shadow-lg">
