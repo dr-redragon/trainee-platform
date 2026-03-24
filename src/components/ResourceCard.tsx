@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useUserRole";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   FileText, Video, LinkIcon, BookOpen, CheckSquare, FolderOpen,
-  GripVertical, Trash2, Eye, Pencil,
+  GripVertical, Trash2, Eye, Pencil, Bookmark,
 } from "lucide-react";
 import { ResourceViewer } from "@/components/ResourceViewer";
 import { EditResourceDialog } from "@/components/EditResourceDialog";
+import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
 const typeIcons: Record<string, typeof FileText> = {
@@ -32,6 +36,9 @@ interface ResourceCardProps {
 export function ResourceCard({ resource, canManage, onDelete, existingSubheadings = [] }: ResourceCardProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const { data: user } = useCurrentUser();
+  const queryClient = useQueryClient();
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: resource.id, disabled: !canManage });
 
@@ -42,6 +49,43 @@ export function ResourceCard({ resource, canManage, onDelete, existingSubheading
   };
 
   const Icon = typeIcons[resource.resource_type] || FileText;
+
+  const { data: isBookmarked } = useQuery({
+    queryKey: ["bookmark-status", resource.id, user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from("bookmarks")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("resource_id", resource.id)
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!user,
+  });
+
+  const toggleBookmark = useMutation({
+    mutationFn: async () => {
+      if (!user) return;
+      if (isBookmarked) {
+        await supabase
+          .from("bookmarks")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("resource_id", resource.id);
+      } else {
+        await supabase
+          .from("bookmarks")
+          .insert({ user_id: user.id, resource_id: resource.id });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookmark-status", resource.id] });
+      queryClient.invalidateQueries({ queryKey: ["my-bookmarks"] });
+      toast.success(isBookmarked ? "Bookmark removed" : "Resource bookmarked");
+    },
+  });
 
   return (
     <>
@@ -71,6 +115,15 @@ export function ResourceCard({ resource, canManage, onDelete, existingSubheading
               )}
             </div>
             <Badge variant="secondary" className="text-[10px] shrink-0">{resource.resource_type.toUpperCase()}</Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-7 w-7 shrink-0 ${isBookmarked ? "text-accent" : "text-muted-foreground hover:text-accent"}`}
+              onClick={(e) => { e.stopPropagation(); toggleBookmark.mutate(); }}
+              title={isBookmarked ? "Remove bookmark" : "Bookmark resource"}
+            >
+              <Bookmark className={`h-4 w-4 ${isBookmarked ? "fill-current" : ""}`} />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
