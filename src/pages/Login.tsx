@@ -42,7 +42,7 @@ const Login = () => {
             Your training,<br />organised.
           </h2>
           <p className="text-primary-foreground/70 text-lg max-w-md leading-relaxed">
-            A centralised resource platform for Higher Surgical and Specialty Trainees across the NHS.
+            A centralised resource platform for Higher Specialty Trainees across the North West Deanery.
           </p>
         </div>
         <p className="relative z-10 text-primary-foreground/40 text-sm">
