@@ -380,6 +380,18 @@ export function AdminSpecialties() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
+                  <Label>Icon & Color</Label>
+                  <div className="flex items-center gap-3">
+                    <IconColorPicker
+                      iconName={newSpec.icon_name}
+                      color={newSpec.color}
+                      onChangeIcon={(icon) => setNewSpec((f) => ({ ...f, icon_name: icon }))}
+                      onChangeColor={(c) => setNewSpec((f) => ({ ...f, color: c }))}
+                    />
+                    <span className="text-xs text-muted-foreground">Click to change</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
                   <Label>Parent Specialty (optional)</Label>
                   <Select value={parentId} onValueChange={setParentId}>
                     <SelectTrigger><SelectValue placeholder="None (top-level)" /></SelectTrigger>
