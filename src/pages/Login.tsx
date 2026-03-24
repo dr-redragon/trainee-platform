@@ -123,8 +123,8 @@ const Login = () => {
             and{" "}
             <a href="#" className="text-accent hover:underline">Terms of Use</a>.
           </p>
-          <div className="mt-10">
-            <ContactForm />
+          <div className="mt-8 pt-6 border-t">
+            <ContactForm compact />
           </div>
         </div>
       </div>
