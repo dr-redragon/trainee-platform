@@ -8,7 +8,6 @@ import { DiscussionBoard } from "@/components/DiscussionBoard";
 import { SpecialtyNoticeBoard } from "@/components/SpecialtyNoticeBoard";
 import { ResourceCard } from "@/components/ResourceCard";
 import { AddResourceDialog } from "@/components/AddResourceDialog";
-import { SectionManager } from "@/components/SectionManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -195,12 +194,9 @@ const SpecialtyDetail = () => {
             <p className="text-sm text-muted-foreground">{specialty.name}</p>
           </div>
           {canManage && (
-            <div className="ml-auto flex items-center gap-2">
-              <SectionManager specialtyId={id!} subsections={subsections ?? []} />
-              <Badge variant="outline" className="text-[10px] text-accent border-accent/30">
-                ✏️ Editing enabled
-              </Badge>
-            </div>
+            <Badge variant="outline" className="ml-auto text-[10px] text-accent border-accent/30">
+              ✏️ Editing enabled
+            </Badge>
           )}
         </div>
 
