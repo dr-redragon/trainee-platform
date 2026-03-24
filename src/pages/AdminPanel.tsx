@@ -22,9 +22,9 @@ const AdminPanel = () => {
         </div>
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="bg-secondary/50 p-1">
+          <TabsList className="bg-secondary/50 p-1 flex flex-wrap h-auto gap-1">
             <TabsTrigger value="users" className="gap-1.5 text-xs">
-              <Users className="h-3.5 w-3.5" /> Users & Permissions
+              <Users className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Users &</span> Permissions
             </TabsTrigger>
             <TabsTrigger value="content" className="gap-1.5 text-xs">
               <BookOpen className="h-3.5 w-3.5" /> Content
@@ -33,10 +33,10 @@ const AdminPanel = () => {
               <Phone className="h-3.5 w-3.5" /> Contacts
             </TabsTrigger>
             <TabsTrigger value="announcements" className="gap-1.5 text-xs">
-              <Megaphone className="h-3.5 w-3.5" /> Announcements
+              <Megaphone className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Announcements</span><span className="sm:hidden">News</span>
             </TabsTrigger>
             <TabsTrigger value="requests" className="gap-1.5 text-xs">
-              <UserPlus className="h-3.5 w-3.5" /> Access Requests
+              <UserPlus className="h-3.5 w-3.5" /> Requests
             </TabsTrigger>
           </TabsList>
 
