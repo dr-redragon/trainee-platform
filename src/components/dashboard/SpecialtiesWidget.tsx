@@ -64,15 +64,15 @@ export function SpecialtiesWidget() {
                       const cColor = child.color ?? "174 60% 40%";
                       return (
                         <Link key={child.id} to={`/specialty/${child.id}`}>
-                          <Card className="group hover:shadow-sm hover:border-accent/30 transition-all duration-200 cursor-pointer">
-                            <CardContent className="p-4">
+                          <Card className="group hover:shadow-sm hover:border-accent/30 transition-all duration-200 cursor-pointer h-full">
+                            <CardContent className="p-3">
                               <div
                                 className="flex h-8 w-8 items-center justify-center rounded-md mb-2 transition-transform group-hover:scale-110"
                                 style={{ backgroundColor: `hsl(${cColor} / 0.12)` }}
                               >
                                 <CIcon className="h-4 w-4" style={{ color: `hsl(${cColor})` }} />
                               </div>
-                              <h4 className="text-xs font-medium group-hover:text-accent transition-colors">{child.short_name}</h4>
+                              <h4 className="text-xs font-medium group-hover:text-accent transition-colors leading-snug break-words">{child.short_name}</h4>
                             </CardContent>
                           </Card>
                         </Link>
