@@ -18,6 +18,7 @@ export function useUserRole() {
     queryFn: async () => {
       if (!user) return "trainee" as const;
       const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      if (data?.some((r) => r.role === "super_admin")) return "super_admin" as const;
       if (data?.some((r) => r.role === "admin")) return "admin" as const;
       if (data?.some((r) => r.role === "facilitator")) return "facilitator" as const;
       return "trainee" as const;
@@ -33,7 +34,7 @@ export function useCanManageSpecialty(specialtyId: string | undefined) {
     queryKey: ["can-manage", user?.id, specialtyId, role],
     queryFn: async () => {
       if (!user || !specialtyId) return false;
-      if (role === "admin") return true;
+      if (role === "admin" || role === "super_admin") return true;
       if (role !== "facilitator") return false;
       const { data } = await supabase
         .from("facilitator_specialties")

@@ -229,7 +229,7 @@ export function AppSidebar() {
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {role === "admin" && (
+              {(role === "admin" || role === "super_admin") && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
                     <NavLink to="/admin" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
