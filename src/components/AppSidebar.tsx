@@ -69,7 +69,7 @@ export function AppSidebar() {
             </div>
           )}
         </Link>
-        {!collapsed && role === "admin" && allDeaneries.length > 1 && (
+        {!collapsed && (role === "admin" || role === "super_admin") && allDeaneries.length > 1 && (
           <Select value={activeDeanery?.id ?? ""} onValueChange={setActiveDeaneryId}>
             <SelectTrigger className="mt-2 h-7 text-xs bg-sidebar-accent border-sidebar-border">
               <SelectValue placeholder="Select deanery" />
