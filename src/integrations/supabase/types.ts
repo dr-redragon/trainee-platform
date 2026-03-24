@@ -153,6 +153,35 @@ export type Database = {
           },
         ]
       }
+      facilitator_specialties: {
+        Row: {
+          created_at: string
+          id: string
+          specialty_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          specialty_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          specialty_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facilitator_specialties_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -344,6 +373,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_resource: {
+        Args: { _subsection_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -351,9 +384,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_facilitator_for: {
+        Args: { _specialty_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "admin" | "trainee"
+      app_role: "admin" | "trainee" | "facilitator"
       contact_category:
         | "deanery"
         | "tpd"
@@ -498,7 +535,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "trainee"],
+      app_role: ["admin", "trainee", "facilitator"],
       contact_category: [
         "deanery",
         "tpd",
