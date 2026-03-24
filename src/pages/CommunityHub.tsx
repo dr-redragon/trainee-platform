@@ -45,7 +45,7 @@ const CommunityHub = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+      <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
             <MessageSquare className="h-5 w-5 text-primary" />
