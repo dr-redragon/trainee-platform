@@ -269,7 +269,7 @@ const SpecialtyDetail = () => {
         </Tabs>
 
         {/* Discussion Board - always visible at bottom */}
-        <div className="pt-6 border-t">
+        <div ref={discussionRef} className="pt-6 border-t">
           <div className="flex items-center gap-2 mb-4">
             <MessageSquare className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-lg font-semibold font-display">Discussion</h2>
