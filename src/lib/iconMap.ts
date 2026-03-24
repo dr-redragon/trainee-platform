@@ -46,6 +46,7 @@ import {
   Ratio, Binary, Hash, Percent,
   Shapes, Box, Cylinder, Cone, Triangle,
   Snowflake, Droplet, CloudSun, Sunrise, Sunset,
+  AirVent, UserCog,
   type LucideIcon,
 } from "lucide-react";
 
@@ -118,6 +119,10 @@ const iconMap: Record<string, LucideIcon> = {
 
   // ── Transport & environment ──
   Plane, Ship, Truck, Tent, Sofa,
+
+  // ── Additional ──
+  AirVent,    // lungs / respiratory
+  UserCog,    // elderly / geriatrics
 };
 
 // Remove duplicate aliases
