@@ -209,6 +209,18 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
     },
   });
 
+  const togglePin = useMutation({
+    mutationFn: async ({ id, pinned }: { id: string; pinned: boolean }) => {
+      const { error } = await supabase.from("discussions").update({ is_pinned: !pinned }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Pin updated");
+      queryClient.invalidateQueries({ queryKey: ["discussions", specialtyId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const deleteComment = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("discussion_comments").delete().eq("id", id);
