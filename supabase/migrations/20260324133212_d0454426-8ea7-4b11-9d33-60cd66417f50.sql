@@ -1,0 +1,1 @@
+ALTER TABLE public.dashboard_preferences ADD COLUMN columns integer NOT NULL DEFAULT 1;
