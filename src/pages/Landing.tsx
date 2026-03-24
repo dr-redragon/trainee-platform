@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import ContactForm from "@/components/ContactForm";
 
 const features = [
   {
@@ -202,6 +203,9 @@ const Landing = () => {
           </div>
         </div>
       </section>
+
+      {/* Contact */}
+      <ContactForm />
 
       {/* Footer */}
       <footer className="border-t bg-card">
