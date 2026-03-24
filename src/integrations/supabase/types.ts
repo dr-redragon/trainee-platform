@@ -586,6 +586,7 @@ export type Database = {
           deanery_id: string
           icon_name: string | null
           id: string
+          is_active: boolean
           name: string
           parent_specialty_id: string | null
           short_name: string
@@ -599,6 +600,7 @@ export type Database = {
           deanery_id?: string
           icon_name?: string | null
           id?: string
+          is_active?: boolean
           name: string
           parent_specialty_id?: string | null
           short_name: string
@@ -612,6 +614,7 @@ export type Database = {
           deanery_id?: string
           icon_name?: string | null
           id?: string
+          is_active?: boolean
           name?: string
           parent_specialty_id?: string | null
           short_name?: string
