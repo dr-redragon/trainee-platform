@@ -259,24 +259,18 @@ const Index = () => {
   const renderTwoColumnView = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-6">
-        <SortableContext items={leftColumn} strategy={verticalListSortingStrategy}>
-          {leftColumn.map((wId) => renderViewCard(wId))}
-        </SortableContext>
+        {leftColumn.map((wId) => renderViewCard(wId))}
       </div>
       <div className="space-y-6">
-        <SortableContext items={rightColumn} strategy={verticalListSortingStrategy}>
-          {rightColumn.map((wId) => renderViewCard(wId))}
-        </SortableContext>
+        {rightColumn.map((wId) => renderViewCard(wId))}
       </div>
     </div>
   );
 
   const renderSingleColumn = () => (
-    <SortableContext items={visibleWidgets} strategy={verticalListSortingStrategy}>
-      <div className={isEditing ? "space-y-2 pl-8" : "space-y-6"}>
-        {visibleWidgets.map((wId) => isEditing ? renderEditCard(wId) : renderViewCard(wId))}
-      </div>
-    </SortableContext>
+    <div className={isEditing ? "space-y-2 pl-8" : "space-y-6"}>
+      {visibleWidgets.map((wId) => isEditing ? renderEditCard(wId) : renderViewCard(wId))}
+    </div>
   );
 
   return (
