@@ -251,7 +251,7 @@ export function AppSidebar() {
             <SidebarMenuButton
               onClick={async () => {
                 await supabase.auth.signOut();
-                window.location.href = "/login";
+                window.location.href = "/";
               }}
               className="text-sidebar-muted hover:text-sidebar-accent-foreground cursor-pointer"
             >
