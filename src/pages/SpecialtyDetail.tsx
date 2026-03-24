@@ -204,12 +204,24 @@ const SpecialtyDetail = () => {
               .filter((r) => r.subsection_id === sub.id)
               .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
+            // Get unique subheadings
+            const existingSubheadings = [...new Set(
+              subResources.map((r) => (r as any).subheading).filter(Boolean) as string[]
+            )];
+
+            // Group resources: ungrouped first, then by subheading
+            const ungrouped = subResources.filter((r) => !(r as any).subheading);
+            const grouped = existingSubheadings.map((sh) => ({
+              name: sh,
+              resources: subResources.filter((r) => (r as any).subheading === sh),
+            }));
+
             return (
               <TabsContent key={sub.id} value={sub.name} className="mt-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-sm">{sub.name}</h3>
                   {canManage && (
-                    <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} />
+                    <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={existingSubheadings} />
                   )}
                 </div>
 
@@ -222,24 +234,62 @@ const SpecialtyDetail = () => {
                     </CardContent>
                   </Card>
                 ) : (
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={(e) => handleDragEnd(e, subResources)}
-                  >
-                    <SortableContext items={subResources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-2">
-                        {subResources.map((r) => (
-                          <ResourceCard
-                            key={r.id}
-                            resource={r}
-                            canManage={!!canManage}
-                            onDelete={(rid) => deleteResource.mutate(rid)}
-                          />
-                        ))}
+                  <div className="space-y-4">
+                    {/* Ungrouped resources */}
+                    {ungrouped.length > 0 && (
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(e) => handleDragEnd(e, ungrouped)}
+                      >
+                        <SortableContext items={ungrouped.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+                          <div className="space-y-2">
+                            {ungrouped.map((r) => (
+                              <ResourceCard
+                                key={r.id}
+                                resource={r}
+                                canManage={!!canManage}
+                                onDelete={(rid) => deleteResource.mutate(rid)}
+                                existingSubheadings={existingSubheadings}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
+                    )}
+
+                    {/* Grouped resources by subheading */}
+                    {grouped.map((group) => (
+                      <div key={group.name} className="space-y-2">
+                        <div className="flex items-center gap-2 pt-2">
+                          <div className="h-px flex-1 bg-border" />
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
+                            {group.name}
+                          </h4>
+                          <div className="h-px flex-1 bg-border" />
+                        </div>
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={(e) => handleDragEnd(e, group.resources)}
+                        >
+                          <SortableContext items={group.resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+                            <div className="space-y-2">
+                              {group.resources.map((r) => (
+                                <ResourceCard
+                                  key={r.id}
+                                  resource={r}
+                                  canManage={!!canManage}
+                                  onDelete={(rid) => deleteResource.mutate(rid)}
+                                  existingSubheadings={existingSubheadings}
+                                />
+                              ))}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
                       </div>
-                    </SortableContext>
-                  </DndContext>
+                    ))}
+                  </div>
                 )}
               </TabsContent>
             );

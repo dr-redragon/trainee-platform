@@ -1,0 +1,1 @@
+ALTER TABLE public.resources ADD COLUMN subheading text DEFAULT NULL;
