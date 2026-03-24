@@ -215,6 +215,7 @@ export type Database = {
           created_at: string
           hidden_widgets: Json
           id: string
+          right_column_widgets: Json
           updated_at: string
           user_id: string
           widget_layout: Json
@@ -224,6 +225,7 @@ export type Database = {
           created_at?: string
           hidden_widgets?: Json
           id?: string
+          right_column_widgets?: Json
           updated_at?: string
           user_id: string
           widget_layout?: Json
@@ -233,6 +235,7 @@ export type Database = {
           created_at?: string
           hidden_widgets?: Json
           id?: string
+          right_column_widgets?: Json
           updated_at?: string
           user_id?: string
           widget_layout?: Json
