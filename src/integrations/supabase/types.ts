@@ -17,6 +17,7 @@ export type Database = {
       access_requests: {
         Row: {
           created_at: string
+          deanery_id: string | null
           email: string
           first_name: string
           id: string
@@ -32,6 +33,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deanery_id?: string | null
           email: string
           first_name: string
           id?: string
@@ -47,6 +49,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deanery_id?: string | null
           email?: string
           first_name?: string
           id?: string
@@ -62,6 +65,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "access_requests_deanery_id_fkey"
+            columns: ["deanery_id"]
+            isOneToOne: false
+            referencedRelation: "deaneries"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "access_requests_specialty_id_fkey"
             columns: ["specialty_id"]
             isOneToOne: false
@@ -75,6 +85,7 @@ export type Database = {
           content: string
           created_at: string
           created_by: string | null
+          deanery_id: string | null
           id: string
           is_active: boolean | null
           title: string
@@ -84,6 +95,7 @@ export type Database = {
           content: string
           created_at?: string
           created_by?: string | null
+          deanery_id?: string | null
           id?: string
           is_active?: boolean | null
           title: string
@@ -93,12 +105,21 @@ export type Database = {
           content?: string
           created_at?: string
           created_by?: string | null
+          deanery_id?: string | null
           id?: string
           is_active?: boolean | null
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "announcements_deanery_id_fkey"
+            columns: ["deanery_id"]
+            isOneToOne: false
+            referencedRelation: "deaneries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_log: {
         Row: {
@@ -161,6 +182,7 @@ export type Database = {
           archived: boolean | null
           category: Database["public"]["Enums"]["contact_category"]
           created_at: string
+          deanery_id: string | null
           email: string
           id: string
           name: string
@@ -175,6 +197,7 @@ export type Database = {
           archived?: boolean | null
           category: Database["public"]["Enums"]["contact_category"]
           created_at?: string
+          deanery_id?: string | null
           email: string
           id?: string
           name: string
@@ -189,6 +212,7 @@ export type Database = {
           archived?: boolean | null
           category?: Database["public"]["Enums"]["contact_category"]
           created_at?: string
+          deanery_id?: string | null
           email?: string
           id?: string
           name?: string
@@ -200,6 +224,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contacts_deanery_id_fkey"
+            columns: ["deanery_id"]
+            isOneToOne: false
+            referencedRelation: "deaneries"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contacts_specialty_id_fkey"
             columns: ["specialty_id"]
@@ -239,6 +270,42 @@ export type Database = {
           updated_at?: string
           user_id?: string
           widget_layout?: Json
+        }
+        Relationships: []
+      }
+      deaneries: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          short_name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          short_name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          short_name?: string
+          slug?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -402,6 +469,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          deanery_id: string | null
           email: string | null
           first_name: string | null
           gdpr_consent_at: string | null
@@ -414,6 +482,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deanery_id?: string | null
           email?: string | null
           first_name?: string | null
           gdpr_consent_at?: string | null
@@ -426,6 +495,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deanery_id?: string | null
           email?: string | null
           first_name?: string | null
           gdpr_consent_at?: string | null
@@ -442,6 +512,13 @@ export type Database = {
             columns: ["specialty_id"]
             isOneToOne: false
             referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_deanery_id_fkey"
+            columns: ["deanery_id"]
+            isOneToOne: false
+            referencedRelation: "deaneries"
             referencedColumns: ["id"]
           },
         ]
@@ -506,6 +583,7 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          deanery_id: string
           icon_name: string | null
           id: string
           name: string
@@ -518,6 +596,7 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string
+          deanery_id?: string
           icon_name?: string | null
           id?: string
           name: string
@@ -530,6 +609,7 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string
+          deanery_id?: string
           icon_name?: string | null
           id?: string
           name?: string
@@ -540,6 +620,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "specialties_deanery_id_fkey"
+            columns: ["deanery_id"]
+            isOneToOne: false
+            referencedRelation: "deaneries"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "specialties_parent_specialty_id_fkey"
             columns: ["parent_specialty_id"]
@@ -682,21 +769,32 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          deanery_id: string | null
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          deanery_id?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          deanery_id?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_deanery_id_fkey"
+            columns: ["deanery_id"]
+            isOneToOne: false
+            referencedRelation: "deaneries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       watched_discussions: {
         Row: {
