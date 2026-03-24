@@ -254,26 +254,18 @@ const Index = () => {
 
   const renderTwoColumnEditing = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pl-8">
-      {/* Left column */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Left Column</p>
-        <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
-          {leftColumn.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
-          )}
-          {leftColumn.map((wId) => renderEditCard(wId))}
-        </div>
-      </div>
-      {/* Right column */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Right Column</p>
-        <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
-          {rightColumn.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
-          )}
-          {rightColumn.map((wId) => renderEditCard(wId))}
-        </div>
-      </div>
+      <DroppableColumn id="col-left" label="Left Column">
+        {leftColumn.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
+        )}
+        {leftColumn.map((wId) => renderEditCard(wId))}
+      </DroppableColumn>
+      <DroppableColumn id="col-right" label="Right Column">
+        {rightColumn.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
+        )}
+        {rightColumn.map((wId) => renderEditCard(wId))}
+      </DroppableColumn>
     </div>
   );
 
