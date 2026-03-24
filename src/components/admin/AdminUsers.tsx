@@ -359,7 +359,7 @@ export function AdminUsers() {
                   updateRole.mutate({
                     userId: permDialogUser.user_id,
                     newRole: selectedRole,
-                    specialtyIds: selectedRole === "admin" ? [] : selectedSpecialties,
+                    specialtyIds: (selectedRole === "admin" || selectedRole === "super_admin") ? [] : selectedSpecialties,
                   });
                 }
               }}
