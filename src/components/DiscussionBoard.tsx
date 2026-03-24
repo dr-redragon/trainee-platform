@@ -322,7 +322,7 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
         </Card>
       ) : (
         <div className="space-y-3">
-          {discussions.map((post) => {
+          {sortedDiscussions.map((post) => {
             const voteCount = getVoteCount(post.id);
             const userVote = getUserVote(post.id);
             const isExpanded = expandedPost === post.id;
