@@ -15,24 +15,38 @@ const RequestAccess = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [deaneryId, setDeaneryId] = useState("");
   const [specialtyId, setSpecialtyId] = useState("none");
   const [trainingGrade, setTrainingGrade] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Fetch specialties publicly (anon key can read based on RLS)
-  // We'll fetch via a simple query - specialties visible to anon won't work due to RLS
-  // So we use a workaround: list them without auth
-  const { data: specialties } = useQuery({
-    queryKey: ["public-specialties"],
+  const { data: deaneries } = useQuery({
+    queryKey: ["public-deaneries"],
     queryFn: async () => {
+      const { data } = await supabase
+        .from("deaneries")
+        .select("id, name, short_name")
+        .eq("is_active", true)
+        .order("name");
+      return data ?? [];
+    },
+  });
+
+  const { data: specialties } = useQuery({
+    queryKey: ["public-specialties", deaneryId],
+    queryFn: async () => {
+      if (!deaneryId) return [];
       const { data } = await supabase
         .from("specialties")
         .select("id, short_name, parent_specialty_id")
+        .eq("deanery_id", deaneryId)
+        .eq("is_active", true)
         .order("sort_order");
       return data ?? [];
     },
+    enabled: !!deaneryId,
   });
 
   const topLevel = specialties?.filter((s) => !s.parent_specialty_id) ?? [];
