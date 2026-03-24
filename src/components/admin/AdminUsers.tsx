@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, UserPlus, Shield, Trash2, Settings, UserCheck, Eye, Crown } from "lucide-react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import { useUserRole } from "@/hooks/useUserRole";
 
 type RoleName = "super_admin" | "admin" | "facilitator" | "trainee";
 
@@ -25,6 +26,7 @@ const roleConfig: Record<RoleName, { label: string; icon: typeof Shield; descrip
 
 export function AdminUsers() {
   const queryClient = useQueryClient();
+  const { data: currentUserRole } = useUserRole();
   const [search, setSearch] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -273,7 +275,7 @@ export function AdminUsers() {
                     <SelectItem value="trainee">Trainee</SelectItem>
                     <SelectItem value="facilitator">Facilitator</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                    {currentUserRole === "super_admin" && <SelectItem value="super_admin">Super Admin</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -308,9 +310,11 @@ export function AdminUsers() {
                   <SelectItem value="admin">
                     <span className="flex items-center gap-2"><Shield className="h-3.5 w-3.5" /> Admin — Full access</span>
                   </SelectItem>
-                  <SelectItem value="super_admin">
-                    <span className="flex items-center gap-2"><Crown className="h-3.5 w-3.5" /> Super Admin — All deaneries</span>
-                  </SelectItem>
+                  {currentUserRole === "super_admin" && (
+                    <SelectItem value="super_admin">
+                      <span className="flex items-center gap-2"><Crown className="h-3.5 w-3.5" /> Super Admin — All deaneries</span>
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
