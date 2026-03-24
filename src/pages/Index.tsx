@@ -20,8 +20,10 @@ import { StarredContactsWidget } from "@/components/dashboard/StarredContactsWid
 import { SpecialtiesWidget } from "@/components/dashboard/SpecialtiesWidget";
 import { RecentResourcesWidget } from "@/components/dashboard/RecentResourcesWidget";
 import {
-  DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors,
+  DndContext, closestCenter, pointerWithin, rectIntersection,
+  PointerSensor, KeyboardSensor, useSensor, useSensors,
   type DragEndEvent, DragOverlay, type DragStartEvent, type DragOverEvent,
+  useDroppable,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
