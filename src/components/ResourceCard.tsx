@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   FileText, Video, LinkIcon, BookOpen, CheckSquare, FolderOpen,
-  GripVertical, Trash2, Eye,
+  GripVertical, Trash2, Eye, Pencil,
 } from "lucide-react";
 import { ResourceViewer } from "@/components/ResourceViewer";
+import { EditResourceDialog } from "@/components/EditResourceDialog";
 import type { Tables } from "@/integrations/supabase/types";
 
 const typeIcons: Record<string, typeof FileText> = {
