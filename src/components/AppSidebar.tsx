@@ -222,11 +222,15 @@ export function AppSidebar() {
       <SidebarFooter className="p-3 border-t border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link to="/login" className="text-sidebar-muted hover:text-sidebar-accent-foreground">
-                <LogOut className="h-4 w-4" />
-                {!collapsed && <span className="text-xs">Sign Out</span>}
-              </Link>
+            <SidebarMenuButton
+              onClick={async () => {
+                await supabase.auth.signOut();
+                window.location.href = "/login";
+              }}
+              className="text-sidebar-muted hover:text-sidebar-accent-foreground cursor-pointer"
+            >
+              <LogOut className="h-4 w-4" />
+              {!collapsed && <span className="text-xs">Sign Out</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
