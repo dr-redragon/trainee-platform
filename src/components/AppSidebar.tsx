@@ -4,8 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, Users, Search, ChevronDown, ChevronRight,
-  BookOpen, LogOut, User, Shield, MessageSquare
+  LogOut, User, Shield, MessageSquare
 } from "lucide-react";
+import logoWhite from "@/assets/logo-white.png";
 import { getIcon } from "@/lib/iconMap";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
@@ -51,9 +52,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link to="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary/20">
-            <BookOpen className="h-5 w-5 text-sidebar-primary" />
-          </div>
+          <img src={logoWhite} alt="NW HST Training Hub" className="h-9 w-9 rounded-lg bg-sidebar-primary/20 p-1" />
           {!collapsed && (
             <div>
               <h1 className="text-sm font-semibold font-display text-sidebar-accent-foreground tracking-tight">
