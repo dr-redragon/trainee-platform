@@ -119,6 +119,10 @@ const iconMap: Record<string, LucideIcon> = {
 
   // ── Transport & environment ──
   Plane, Ship, Truck, Tent, Sofa,
+
+  // ── Additional ──
+  AirVent,    // lungs / respiratory
+  UserCog,    // elderly / geriatrics
 };
 
 // Remove duplicate aliases
