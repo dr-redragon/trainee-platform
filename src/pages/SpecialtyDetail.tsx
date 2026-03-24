@@ -1,36 +1,141 @@
 import { useParams } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { specialties, defaultSubsections } from "@/lib/specialties";
-import { sampleContacts } from "@/lib/contacts";
 import { ContactCard } from "@/components/ContactCard";
 import { DiscussionBoard } from "@/components/DiscussionBoard";
+import { ResourceCard } from "@/components/ResourceCard";
+import { AddResourceDialog } from "@/components/AddResourceDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Video, LinkIcon, BookOpen, CheckSquare, FolderOpen, Plus, Users, MessageSquare } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
-const resourceTypeIcons: Record<string, typeof FileText> = {
-  pdf: FileText,
-  video: Video,
-  link: LinkIcon,
-  document: BookOpen,
-  checklist: CheckSquare,
-  folder: FolderOpen,
-};
-
-const sampleResources = [
-  { title: "Specialty Curriculum 2025-26", type: "pdf", desc: "Latest curriculum from the Royal College", date: "15 Mar 2026", author: "Admin" },
-  { title: "Core Skills Assessment Guide", type: "document", desc: "Assessment criteria and marking rubric", date: "10 Mar 2026", author: "TPD Office" },
-  { title: "Operative Technique — Introduction", type: "video", desc: "Introductory video covering basic operative setup", date: "8 Mar 2026", author: "Mr J. Smith" },
-  { title: "NICE Guidelines — Quick Reference", type: "link", desc: "Link to relevant NICE clinical guidelines", date: "5 Mar 2026", author: "Admin" },
-];
-
-const allTabs = [...defaultSubsections, "Key Contacts", "Discussion"];
+import { Users, MessageSquare, FolderOpen } from "lucide-react";
+import { toast } from "sonner";
+import { useCanManageSpecialty } from "@/hooks/useUserRole";
+import { getIcon } from "@/lib/iconMap";
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import type { Tables } from "@/integrations/supabase/types";
 
 const SpecialtyDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const specialty = specialties.find((s) => s.id === id);
+  const queryClient = useQueryClient();
+  const { data: canManage } = useCanManageSpecialty(id);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor)
+  );
+
+  // Fetch specialty from DB
+  const { data: specialty, isLoading: specLoading } = useQuery({
+    queryKey: ["specialty", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("specialties")
+        .select("*")
+        .eq("id", id!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  // Fetch subsections
+  const { data: subsections } = useQuery({
+    queryKey: ["subsections", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subsections")
+        .select("*")
+        .eq("specialty_id", id!)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  // Fetch all resources for this specialty's subsections
+  const subsectionIds = subsections?.map((s) => s.id) ?? [];
+  const { data: resources } = useQuery({
+    queryKey: ["resources", id, subsectionIds],
+    queryFn: async () => {
+      if (!subsectionIds.length) return [];
+      const { data, error } = await supabase
+        .from("resources")
+        .select("*")
+        .in("subsection_id", subsectionIds)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: subsectionIds.length > 0,
+  });
+
+  // Contacts for this specialty
+  const { data: contacts } = useQuery({
+    queryKey: ["contacts", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .or(`specialty_id.eq.${id},specialty_id.is.null`)
+        .eq("archived", false);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const deleteResource = useMutation({
+    mutationFn: async (resourceId: string) => {
+      const { error } = await supabase.from("resources").delete().eq("id", resourceId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Resource deleted");
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const reorderResources = useMutation({
+    mutationFn: async (updates: { id: string; sort_order: number }[]) => {
+      for (const u of updates) {
+        await supabase.from("resources").update({ sort_order: u.sort_order }).eq("id", u.id);
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["resources"] }),
+  });
+
+  const handleDragEnd = (event: DragEndEvent, subsectionResources: Tables<"resources">[]) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = subsectionResources.findIndex((r) => r.id === active.id);
+    const newIndex = subsectionResources.findIndex((r) => r.id === over.id);
+    const reordered = arrayMove(subsectionResources, oldIndex, newIndex);
+    const updates = reordered.map((r, i) => ({ id: r.id, sort_order: i }));
+    // Optimistic update
+    queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
+      if (!old) return old;
+      const otherResources = old.filter((r) => r.subsection_id !== subsectionResources[0]?.subsection_id);
+      return [...otherResources, ...reordered.map((r, i) => ({ ...r, sort_order: i }))];
+    });
+    reorderResources.mutate(updates);
+  };
+
+  if (specLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64 text-muted-foreground">Loading…</div>
+      </DashboardLayout>
+    );
+  }
 
   if (!specialty) {
     return (
@@ -42,9 +147,10 @@ const SpecialtyDetail = () => {
     );
   }
 
-  const specialtyContacts = sampleContacts.filter(
-    (c) => c.specialtyId === id || !c.specialtyId
-  );
+  const Icon = getIcon(specialty.icon_name);
+  const color = specialty.color ?? "174 60% 40%";
+  const tabNames = [...(subsections?.map((s) => s.name) ?? []), "Key Contacts", "Discussion"];
+  const defaultTab = subsections?.[0]?.name ?? "Key Contacts";
 
   return (
     <DashboardLayout>
@@ -53,20 +159,25 @@ const SpecialtyDetail = () => {
         <div className="flex items-center gap-4">
           <div
             className="flex h-12 w-12 items-center justify-center rounded-xl"
-            style={{ backgroundColor: `hsl(${specialty.color} / 0.12)` }}
+            style={{ backgroundColor: `hsl(${color} / 0.12)` }}
           >
-            <specialty.icon className="h-6 w-6" style={{ color: `hsl(${specialty.color})` }} />
+            <Icon className="h-6 w-6" style={{ color: `hsl(${color})` }} />
           </div>
           <div>
-            <h1 className="text-2xl font-display font-bold">{specialty.shortName}</h1>
+            <h1 className="text-2xl font-display font-bold">{specialty.short_name}</h1>
             <p className="text-sm text-muted-foreground">{specialty.name}</p>
           </div>
+          {canManage && (
+            <Badge variant="outline" className="ml-auto text-[10px] text-accent border-accent/30">
+              ✏️ Editing enabled
+            </Badge>
+          )}
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue={defaultSubsections[0]} className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto bg-secondary/50 p-1">
-            {allTabs.map((tab) => (
+            {tabNames.map((tab) => (
               <TabsTrigger key={tab} value={tab} className="text-xs whitespace-nowrap">
                 {tab === "Key Contacts" && <Users className="h-3 w-3 mr-1" />}
                 {tab === "Discussion" && <MessageSquare className="h-3 w-3 mr-1" />}
@@ -75,52 +186,73 @@ const SpecialtyDetail = () => {
             ))}
           </TabsList>
 
-          {/* Resource subsections */}
-          {defaultSubsections.map((sub) => (
-            <TabsContent key={sub} value={sub} className="mt-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-sm">{sub}</h3>
-                <Button variant="outline" size="sm" className="text-xs gap-1">
-                  <Plus className="h-3.5 w-3.5" /> Add Resource
-                </Button>
-              </div>
-              {sampleResources.map((r, i) => {
-                const Icon = resourceTypeIcons[r.type] || FileText;
-                return (
-                  <Card key={i} className="hover:shadow-sm transition-shadow cursor-pointer">
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                        <Icon className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-medium">{r.title}</h4>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{r.desc}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <Badge variant="secondary" className="text-[10px] mb-1">{r.type.toUpperCase()}</Badge>
-                        <p className="text-[10px] text-muted-foreground">{r.date}</p>
-                      </div>
+          {/* Resource subsection tabs */}
+          {subsections?.map((sub) => {
+            const subResources = (resources ?? [])
+              .filter((r) => r.subsection_id === sub.id)
+              .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+            return (
+              <TabsContent key={sub.id} value={sub.name} className="mt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">{sub.name}</h3>
+                  {canManage && (
+                    <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} />
+                  )}
+                </div>
+
+                {subResources.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                      <FolderOpen className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                      <p className="text-sm text-muted-foreground">No resources yet</p>
+                      {canManage && <p className="text-xs text-muted-foreground/60 mt-1">Click "Add Resource" to get started</p>}
                     </CardContent>
                   </Card>
-                );
-              })}
-            </TabsContent>
-          ))}
+                ) : (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(e) => handleDragEnd(e, subResources)}
+                  >
+                    <SortableContext items={subResources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-2">
+                        {subResources.map((r) => (
+                          <ResourceCard
+                            key={r.id}
+                            resource={r}
+                            canManage={!!canManage}
+                            onDelete={(rid) => deleteResource.mutate(rid)}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                )}
+              </TabsContent>
+            );
+          })}
 
           {/* Key Contacts tab */}
           <TabsContent value="Key Contacts" className="mt-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm">Key Contacts — {specialty.shortName}</h3>
-              <Button variant="outline" size="sm" className="text-xs gap-1">
-                <Plus className="h-3.5 w-3.5" /> Add Contact
-              </Button>
-            </div>
-            {specialtyContacts.length === 0 ? (
+            <h3 className="font-semibold text-sm">Key Contacts — {specialty.short_name}</h3>
+            {!contacts?.length ? (
               <p className="text-sm text-muted-foreground text-center py-8">No contacts added yet.</p>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                {specialtyContacts.map((contact) => (
-                  <ContactCard key={contact.id} contact={contact} />
+                {contacts.map((c) => (
+                  <ContactCard
+                    key={c.id}
+                    contact={{
+                      id: c.id,
+                      name: c.name,
+                      role: c.role,
+                      organisation: c.organisation,
+                      email: c.email,
+                      phone: c.phone ?? undefined,
+                      category: c.category,
+                    }}
+                  />
                 ))}
               </div>
             )}
