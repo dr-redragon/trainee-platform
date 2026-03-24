@@ -1,7 +1,8 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Download, X, FileText, AlertTriangle } from "lucide-react";
+import { ExternalLink, Download, FileText, AlertTriangle } from "lucide-react";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface ResourceViewerProps {
@@ -14,7 +15,6 @@ function getViewerUrl(resource: Tables<"resources">): string | null {
   const url = resource.file_url || resource.external_url || resource.embed_url;
   if (!url) return null;
 
-  // Google Docs Viewer for office documents
   const lowerUrl = url.toLowerCase();
   if (
     lowerUrl.endsWith(".docx") ||
@@ -27,7 +27,6 @@ function getViewerUrl(resource: Tables<"resources">): string | null {
     return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
   }
 
-  // PDFs and videos can be embedded directly
   return url;
 }
 
@@ -53,11 +52,37 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
   const ytId = isYouTube(resource);
   const video = isVideo(resource);
 
+  const handleOpen = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (rawUrl) window.open(rawUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleDownload = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (resource.file_url) {
+      const a = document.createElement("a");
+      a.href = resource.file_url;
+      a.download = resource.title || "download";
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-[95vw] h-[85vh] flex flex-col p-0 gap-0">
+        <VisuallyHidden>
+          <DialogTitle>{resource.title}</DialogTitle>
+          <DialogDescription>Viewing resource: {resource.title}</DialogDescription>
+        </VisuallyHidden>
+
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b bg-secondary/30">
+        <div className="flex items-center gap-3 px-4 py-3 border-b bg-secondary/30 pr-12">
           <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold truncate">{resource.title}</h3>
@@ -69,20 +94,14 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
             {resource.resource_type.toUpperCase()}
           </Badge>
           {rawUrl && (
-            <>
-              <a href={rawUrl} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm" className="text-xs gap-1">
-                  <ExternalLink className="h-3 w-3" /> Open
-                </Button>
-              </a>
-              {resource.file_url && (
-                <a href={resource.file_url} download>
-                  <Button variant="outline" size="sm" className="text-xs gap-1">
-                    <Download className="h-3 w-3" /> Download
-                  </Button>
-                </a>
-              )}
-            </>
+            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleOpen}>
+              <ExternalLink className="h-3 w-3" /> Open
+            </Button>
+          )}
+          {resource.file_url && (
+            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleDownload}>
+              <Download className="h-3 w-3" /> Download
+            </Button>
           )}
         </div>
 
@@ -114,11 +133,9 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
               <AlertTriangle className="h-10 w-10 opacity-40" />
               <p className="text-sm">No viewable content available for this resource.</p>
               {rawUrl && (
-                <a href={rawUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="sm">
-                    Open in new tab <ExternalLink className="h-3 w-3 ml-1" />
-                  </Button>
-                </a>
+                <Button variant="outline" size="sm" onClick={handleOpen}>
+                  Open in new tab <ExternalLink className="h-3 w-3 ml-1" />
+                </Button>
               )}
             </div>
           )}
