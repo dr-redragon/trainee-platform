@@ -10,11 +10,16 @@ interface ResourceViewerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function getViewerUrl(resource: Tables<"resources">): string | null {
+function getViewerUrl(resource: Tables<"resources">): { url: string; type: "pdf" | "office" | "direct" } | null {
   const url = resource.file_url || resource.external_url || resource.embed_url;
   if (!url) return null;
 
-  const lowerUrl = url.toLowerCase();
+  const lowerUrl = url.toLowerCase().split("?")[0]; // strip query params for extension check
+
+  if (lowerUrl.endsWith(".pdf")) {
+    return { url, type: "pdf" };
+  }
+
   if (
     lowerUrl.endsWith(".docx") ||
     lowerUrl.endsWith(".doc") ||
@@ -23,10 +28,13 @@ function getViewerUrl(resource: Tables<"resources">): string | null {
     lowerUrl.endsWith(".xlsx") ||
     lowerUrl.endsWith(".xls")
   ) {
-    return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+    return {
+      url: `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`,
+      type: "office",
+    };
   }
 
-  return url;
+  return { url, type: "direct" };
 }
 
 function isVideo(resource: Tables<"resources">): boolean {
@@ -117,12 +125,25 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
               </video>
             </div>
           ) : viewerUrl ? (
-            <iframe
-              src={viewerUrl}
-              className="w-full h-full border-0"
-              title={resource.title}
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-            />
+            viewerUrl.type === "pdf" ? (
+              <object
+                data={viewerUrl.url}
+                type="application/pdf"
+                className="w-full h-full"
+              >
+                <iframe
+                  src={`https://docs.google.com/gview?url=${encodeURIComponent(viewerUrl.url)}&embedded=true`}
+                  className="w-full h-full border-0"
+                  title={resource.title}
+                />
+              </object>
+            ) : (
+              <iframe
+                src={viewerUrl.url}
+                className="w-full h-full border-0"
+                title={resource.title}
+              />
+            )
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
               <AlertTriangle className="h-10 w-10 opacity-40" />
