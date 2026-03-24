@@ -198,14 +198,6 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <NavLink to="/contacts" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                    <Users className="h-4 w-4" />
-                    {!collapsed && <span>Key Contacts</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
                   <NavLink to="/profile" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
                     <User className="h-4 w-4" />
                     {!collapsed && <span>My Profile</span>}
