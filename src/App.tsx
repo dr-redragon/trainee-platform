@@ -10,6 +10,7 @@ import SpecialtyDetail from "./pages/SpecialtyDetail";
 import KeyContacts from "./pages/KeyContacts";
 import AdminPanel from "./pages/AdminPanel";
 import MyProfile from "./pages/MyProfile";
+import CommunityHub from "./pages/CommunityHub";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
