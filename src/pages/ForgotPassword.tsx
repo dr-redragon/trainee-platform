@@ -109,6 +109,11 @@ const ForgotPassword = () => {
                   <ArrowLeft className="h-3 w-3" /> Back to sign in
                 </Link>
               </p>
+
+              <p className="text-center text-sm text-muted-foreground mt-3">
+                Don't have an account?{" "}
+                <Link to="/request-access" className="text-accent hover:underline font-medium">Request Access</Link>
+              </p>
             </>
           )}
         </div>
