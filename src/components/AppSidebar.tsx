@@ -177,6 +177,36 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
+          <SidebarGroupLabel>Community</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {topLevel.map((s) => {
+                const children = childrenOf(s.id);
+                const allIds = [s.id, ...children.map((c) => c.id)];
+                return allIds.map((sid) => {
+                  const spec = specialties?.find((sp) => sp.id === sid);
+                  if (!spec) return null;
+                  return (
+                    <SidebarMenuItem key={`disc-${sid}`}>
+                      <SidebarMenuButton asChild>
+                        <NavLink
+                          to={`/specialty/${sid}#discussion`}
+                          activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                          className="text-xs"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          {!collapsed && <span>{spec.short_name}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                });
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
           <SidebarGroupLabel>Account</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
