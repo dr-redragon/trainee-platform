@@ -77,6 +77,22 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
     enabled: !!expandedPost,
   });
 
+  const { data: commentCounts } = useQuery({
+    queryKey: ["discussion-comment-counts", specialtyId, discussions?.map(d => d.id).join()],
+    queryFn: async () => {
+      if (!discussions?.length) return {};
+      const { data, error } = await supabase
+        .from("discussion_comments")
+        .select("discussion_id")
+        .in("discussion_id", discussions.map((d) => d.id));
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      data.forEach((c) => { counts[c.discussion_id] = (counts[c.discussion_id] || 0) + 1; });
+      return counts;
+    },
+    enabled: !!discussions?.length,
+  });
+
   const { data: votes } = useQuery({
     queryKey: ["discussion-votes", specialtyId],
     queryFn: async () => {
