@@ -13,6 +13,8 @@ import MyProfile from "./pages/MyProfile";
 import CommunityHub from "./pages/CommunityHub";
 import NotFound from "./pages/NotFound";
 import RequestAccess from "./pages/RequestAccess";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import { DeaneryProvider } from "./contexts/DeaneryContext";
 
 const queryClient = new QueryClient();
@@ -29,6 +31,8 @@ const App = () => (
             <Route path="/dashboard" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/request-access" element={<RequestAccess />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/specialty/:id" element={<SpecialtyDetail />} />
             
             <Route path="/admin" element={<AdminPanel />} />
