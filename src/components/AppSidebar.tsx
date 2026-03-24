@@ -57,7 +57,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div>
               <h1 className="text-sm font-semibold font-display text-sidebar-accent-foreground tracking-tight">
-                HST Training Hub
+                North West HST Training Hub
               </h1>
               <p className="text-[10px] text-sidebar-muted">NHS Higher Surgical Training</p>
             </div>
