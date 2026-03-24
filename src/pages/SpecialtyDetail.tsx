@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -26,6 +26,7 @@ import type { Tables } from "@/integrations/supabase/types";
 const SpecialtyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { data: canManage } = useCanManageSpecialty(id);
   const discussionRef = useRef<HTMLDivElement>(null);
@@ -75,6 +76,15 @@ const SpecialtyDetail = () => {
     },
     enabled: !!id,
   });
+
+  // Set active tab from subsection query param
+  useEffect(() => {
+    const subsectionId = searchParams.get("subsection");
+    if (subsectionId && subsections) {
+      const match = subsections.find((s) => s.id === subsectionId);
+      if (match) setActiveTab(match.name);
+    }
+  }, [searchParams, subsections]);
 
   // Fetch all resources for this specialty's subsections
   const subsectionIds = subsections?.map((s) => s.id) ?? [];
