@@ -61,6 +61,23 @@ function SortableWidget({ id, children, isEditing }: { id: string; children: Rea
   );
 }
 
+function DroppableColumn({ id, children, label }: { id: string; children: React.ReactNode; label: string }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">{label}</p>
+      <div
+        ref={setNodeRef}
+        className={`space-y-2 min-h-[80px] rounded-lg border-2 border-dashed p-2 transition-colors ${
+          isOver ? "border-accent bg-accent/5" : "border-muted"
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 const Index = () => {
   const { data: user } = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
