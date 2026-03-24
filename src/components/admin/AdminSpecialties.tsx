@@ -10,8 +10,9 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Copy, GripVertical, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, Copy, ChevronRight, ChevronDown } from "lucide-react";
 import { getIcon } from "@/lib/iconMap";
+import { IconColorPicker } from "@/components/IconColorPicker";
 import { toast } from "sonner";
 
 export function AdminSpecialties() {
@@ -205,10 +206,24 @@ export function AdminSpecialties() {
   const toggleParent = (id: string) =>
     setExpandedParents((prev) => ({ ...prev, [id]: !prev[id] }));
 
+  const updateAppearance = useMutation({
+    mutationFn: async ({ id, icon_name, color }: { id: string; icon_name?: string; color?: string }) => {
+      const update: Record<string, string> = {};
+      if (icon_name !== undefined) update.icon_name = icon_name;
+      if (color !== undefined) update.color = color;
+      const { error } = await supabase.from("specialties").update(update).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-specialties"] });
+      queryClient.invalidateQueries({ queryKey: ["sidebar-specialties"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const otherDeaneries = allDeaneries.filter((d) => d.id !== activeDeanery?.id);
 
   const renderSpecialtyRow = (spec: any, isChild = false) => {
-    const SIcon = getIcon(spec.icon_name);
     const color = spec.color ?? "174 60% 40%";
     const children = childrenOf(spec.id);
     const isExpanded = expandedParents[spec.id] ?? false;
@@ -217,12 +232,12 @@ export function AdminSpecialties() {
       <div key={spec.id}>
         <Card className={`${!spec.is_active ? "opacity-50" : ""} ${isChild ? "ml-8 border-l-2 border-muted" : ""}`}>
           <CardContent className="p-3 flex items-center gap-3">
-            <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
-              style={{ backgroundColor: `hsl(${color} / 0.12)` }}
-            >
-              <SIcon className="h-4 w-4" style={{ color: `hsl(${color})` }} />
-            </div>
+            <IconColorPicker
+              iconName={spec.icon_name ?? "Stethoscope"}
+              color={color}
+              onChangeIcon={(icon) => updateAppearance.mutate({ id: spec.id, icon_name: icon })}
+              onChangeColor={(c) => updateAppearance.mutate({ id: spec.id, color: c })}
+            />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium truncate">{spec.short_name}</span>
@@ -362,6 +377,18 @@ export function AdminSpecialties() {
                       onChange={(e) => setNewSpec((f) => ({ ...f, slug: e.target.value }))}
                       placeholder="e.g. general-surgery"
                     />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Icon & Color</Label>
+                  <div className="flex items-center gap-3">
+                    <IconColorPicker
+                      iconName={newSpec.icon_name}
+                      color={newSpec.color}
+                      onChangeIcon={(icon) => setNewSpec((f) => ({ ...f, icon_name: icon }))}
+                      onChangeColor={(c) => setNewSpec((f) => ({ ...f, color: c }))}
+                    />
+                    <span className="text-xs text-muted-foreground">Click to change</span>
                   </div>
                 </div>
                 <div className="space-y-1.5">
