@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, FileUp, Trash2 } from "lucide-react";
+import { Upload, FileUp } from "lucide-react";
 import { toast } from "sonner";
 import { Constants } from "@/integrations/supabase/types";
 import type { Tables } from "@/integrations/supabase/types";
@@ -27,11 +27,34 @@ export function EditResourceDialog({ resource, open, onOpenChange, existingSubhe
   const [externalUrl, setExternalUrl] = useState(resource.external_url ?? "");
   const [subheading, setSubheading] = useState((resource as any).subheading ?? "none");
   const [customSubheading, setCustomSubheading] = useState("");
+  const [subsectionId, setSubsectionId] = useState(resource.subsection_id);
   const [file, setFile] = useState<File | null>(null);
   const [removeFile, setRemoveFile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Fetch sibling subsections for the same specialty
+  const { data: siblingSubsections } = useQuery({
+    queryKey: ["sibling-subsections", resource.subsection_id],
+    queryFn: async () => {
+      // First get the specialty_id from the current subsection
+      const { data: currentSub } = await supabase
+        .from("subsections")
+        .select("specialty_id")
+        .eq("id", resource.subsection_id)
+        .single();
+      if (!currentSub) return [];
+      // Then fetch all subsections for that specialty
+      const { data } = await supabase
+        .from("subsections")
+        .select("id, name")
+        .eq("specialty_id", currentSub.specialty_id)
+        .order("sort_order", { ascending: true });
+      return data ?? [];
+    },
+    enabled: open,
+  });
 
   useEffect(() => {
     if (open) {
@@ -41,6 +64,7 @@ export function EditResourceDialog({ resource, open, onOpenChange, existingSubhe
       setExternalUrl(resource.external_url ?? "");
       setSubheading((resource as any).subheading ?? "none");
       setCustomSubheading("");
+      setSubsectionId(resource.subsection_id);
       setFile(null);
       setRemoveFile(false);
     }
@@ -75,7 +99,7 @@ export function EditResourceDialog({ resource, open, onOpenChange, existingSubhe
 
       if (file) {
         const ext = file.name.split(".").pop();
-        const path = `${resource.subsection_id}/${crypto.randomUUID()}.${ext}`;
+        const path = `${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) throw uploadErr;
         const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
@@ -93,6 +117,7 @@ export function EditResourceDialog({ resource, open, onOpenChange, existingSubhe
         external_url: externalUrl.trim() || null,
         file_url: fileUrl,
         subheading: finalSubheading,
+        subsection_id: subsectionId,
       } as any).eq("id", resource.id);
       if (error) throw error;
     },
@@ -167,6 +192,22 @@ export function EditResourceDialog({ resource, open, onOpenChange, existingSubhe
               <Input value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://…" />
             </div>
           </div>
+
+          {/* Move to section */}
+          {(siblingSubsections?.length ?? 0) > 1 && (
+            <div className="space-y-1.5">
+              <Label>Section</Label>
+              <Select value={subsectionId} onValueChange={setSubsectionId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {siblingSubsections!.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label>Subheading (optional)</Label>
             <Select value={subheading} onValueChange={setSubheading}>
