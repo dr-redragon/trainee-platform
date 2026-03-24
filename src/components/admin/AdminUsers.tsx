@@ -10,13 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, UserPlus, Shield, Trash2, Settings, UserCheck, Eye } from "lucide-react";
+import { Search, UserPlus, Shield, Trash2, Settings, UserCheck, Eye, Crown } from "lucide-react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
-type RoleName = "admin" | "facilitator" | "trainee";
+type RoleName = "super_admin" | "admin" | "facilitator" | "trainee";
 
 const roleConfig: Record<RoleName, { label: string; icon: typeof Shield; description: string }> = {
+  super_admin: { label: "Super Admin", icon: Crown, description: "Full access across all deaneries" },
   admin: { label: "Admin", icon: Shield, description: "Full access to all content, users, and settings" },
   facilitator: { label: "Facilitator", icon: UserCheck, description: "Can add/remove resources for assigned specialties" },
   trainee: { label: "Trainee", icon: Eye, description: "View-only access to assigned specialties" },
@@ -80,6 +81,7 @@ export function AdminUsers() {
   });
 
   const getUserRole = (userId: string): RoleName => {
+    if (roles?.some((r) => r.user_id === userId && r.role === "super_admin")) return "super_admin";
     if (roles?.some((r) => r.user_id === userId && r.role === "admin")) return "admin";
     if (roles?.some((r) => r.user_id === userId && r.role === "facilitator")) return "facilitator";
     return "trainee";
@@ -105,7 +107,10 @@ export function AdminUsers() {
       await supabase.from("facilitator_specialties").delete().eq("user_id", userId);
       await supabase.from("trainee_specialties").delete().eq("user_id", userId);
 
-      if (newRole === "admin") {
+      if (newRole === "super_admin") {
+        const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "super_admin" });
+        if (error) throw error;
+      } else if (newRole === "admin") {
         const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "admin" });
         if (error) throw error;
       } else if (newRole === "facilitator") {
@@ -211,7 +216,7 @@ export function AdminUsers() {
   );
 
   const specLabelFn = (role: RoleName, userId: string) => {
-    if (role === "admin") return "All";
+    if (role === "admin" || role === "super_admin") return "All";
     const specs = getUserAssignedSpecs(userId, role);
     if (specs.length === 0) return role === "trainee" ? "None assigned" : "—";
     return specialties?.filter((s) => specs.includes(s.id)).map((s) => s.short_name).join(", ") ?? "—";
@@ -268,6 +273,7 @@ export function AdminUsers() {
                     <SelectItem value="trainee">Trainee</SelectItem>
                     <SelectItem value="facilitator">Facilitator</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="super_admin">Super Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -301,6 +307,9 @@ export function AdminUsers() {
                   </SelectItem>
                   <SelectItem value="admin">
                     <span className="flex items-center gap-2"><Shield className="h-3.5 w-3.5" /> Admin — Full access</span>
+                  </SelectItem>
+                  <SelectItem value="super_admin">
+                    <span className="flex items-center gap-2"><Crown className="h-3.5 w-3.5" /> Super Admin — All deaneries</span>
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -350,7 +359,7 @@ export function AdminUsers() {
                   updateRole.mutate({
                     userId: permDialogUser.user_id,
                     newRole: selectedRole,
-                    specialtyIds: selectedRole === "admin" ? [] : selectedSpecialties,
+                    specialtyIds: (selectedRole === "admin" || selectedRole === "super_admin") ? [] : selectedSpecialties,
                   });
                 }
               }}
@@ -390,7 +399,7 @@ export function AdminUsers() {
                     <TableCell className="text-muted-foreground text-sm">{p.email}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={role === "admin" ? "destructive" : role === "facilitator" ? "default" : "secondary"}
+                        variant={role === "super_admin" ? "destructive" : role === "admin" ? "destructive" : role === "facilitator" ? "default" : "secondary"}
                         className="text-xs gap-1"
                       >
                         <cfg.icon className="h-3 w-3" /> {cfg.label}
