@@ -234,6 +234,8 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
   });
 
   const isAdmin = role === "admin";
+  const isFacilitator = role === "facilitator";
+  const canPin = isAdmin || isFacilitator;
 
   const timeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
