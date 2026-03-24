@@ -167,6 +167,27 @@ export function EditResourceDialog({ resource, open, onOpenChange, existingSubhe
               <Input value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://…" />
             </div>
           </div>
+          <div className="space-y-1.5">
+            <Label>Subheading (optional)</Label>
+            <Select value={subheading} onValueChange={setSubheading}>
+              <SelectTrigger><SelectValue placeholder="No subheading" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No subheading</SelectItem>
+                {existingSubheadings.map((sh) => (
+                  <SelectItem key={sh} value={sh}>{sh}</SelectItem>
+                ))}
+                <SelectItem value="__new__">+ Create new subheading</SelectItem>
+              </SelectContent>
+            </Select>
+            {subheading === "__new__" && (
+              <Input
+                value={customSubheading}
+                onChange={(e) => setCustomSubheading(e.target.value)}
+                placeholder="Enter new subheading name…"
+                className="mt-1.5"
+              />
+            )}
+          </div>
           <Button
             className="w-full"
             onClick={() => updateResource.mutate()}
