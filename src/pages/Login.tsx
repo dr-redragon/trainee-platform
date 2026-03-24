@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import ContactForm from "@/components/ContactForm";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -122,6 +123,9 @@ const Login = () => {
             and{" "}
             <a href="#" className="text-accent hover:underline">Terms of Use</a>.
           </p>
+          <div className="mt-10">
+            <ContactForm />
+          </div>
         </div>
       </div>
     </div>
