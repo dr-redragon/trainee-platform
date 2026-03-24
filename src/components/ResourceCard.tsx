@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   FileText, Video, LinkIcon, BookOpen, CheckSquare, FolderOpen,
-  GripVertical, Trash2, Eye,
+  GripVertical, Trash2, Eye, Pencil,
 } from "lucide-react";
 import { ResourceViewer } from "@/components/ResourceViewer";
+import { EditResourceDialog } from "@/components/EditResourceDialog";
 import type { Tables } from "@/integrations/supabase/types";
 
 const typeIcons: Record<string, typeof FileText> = {
@@ -29,6 +30,7 @@ interface ResourceCardProps {
 
 export function ResourceCard({ resource, canManage, onDelete }: ResourceCardProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: resource.id, disabled: !canManage });
 
@@ -76,6 +78,16 @@ export function ResourceCard({ resource, canManage, onDelete }: ResourceCardProp
             >
               <Eye className="h-4 w-4" />
             </Button>
+            {canManage && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0 text-muted-foreground hover:text-accent"
+                onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
             {canManage && onDelete && (
               <Button
                 variant="ghost"
@@ -90,6 +102,7 @@ export function ResourceCard({ resource, canManage, onDelete }: ResourceCardProp
         </Card>
       </div>
       <ResourceViewer resource={resource} open={viewerOpen} onOpenChange={setViewerOpen} />
+      {canManage && <EditResourceDialog resource={resource} open={editOpen} onOpenChange={setEditOpen} />}
     </>
   );
 }
