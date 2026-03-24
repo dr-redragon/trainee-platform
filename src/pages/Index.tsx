@@ -141,26 +141,6 @@ const Index = () => {
 
   const renderWidget = (widgetId: WidgetId) => {
     switch (widgetId) {
-      case "announcements":
-        if (!announcements?.length) return null;
-        return (
-          <div className="space-y-3">
-            {announcements.map((a) => (
-              <Card key={a.id} className="border-accent/30 bg-accent/5">
-                <CardContent className="flex items-start gap-4 p-5">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/15">
-                    <Megaphone className="h-5 w-5 text-accent" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm mb-1">{a.title}</h3>
-                    <p className="text-sm text-muted-foreground">{a.content}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        );
-
       case "specialties":
         return (
           <div>
