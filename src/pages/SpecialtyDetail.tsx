@@ -478,39 +478,34 @@ const SpecialtyDetail = () => {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="space-y-4">
-                    {ungrouped.length > 0 && (
-                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, ungrouped)}>
-                        <SortableContext items={ungrouped.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-                          <div className="space-y-2">
-                            {ungrouped.map((r) => (
-                              <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={allSubheadings} />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
-                    )}
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(e) => handleCrossGroupDragEnd(e, subResources, allSubheadings)}
+                  >
+                    <div className="space-y-4">
+                      {(ungrouped.length > 0 || canManage) && (
+                        <DroppableUngrouped
+                          resources={ungrouped}
+                          canManage={!!canManage}
+                          onDelete={(rid) => deleteResource.mutate(rid)}
+                          existingSubheadings={allSubheadings}
+                        />
+                      )}
 
-                    {grouped.map((group) => (
-                      <SubheadingGroup key={group.name} name={group.name} resourceIds={group.resources.map((r) => r.id)} canManage={!!canManage}>
-                        {group.resources.length === 0 ? (
-                          <div className="flex items-center justify-center py-6 text-xs text-muted-foreground border border-dashed rounded-md">
-                            No resources yet — use "Add Resource" and select this subheading
-                          </div>
-                        ) : (
-                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, group.resources)}>
-                            <SortableContext items={group.resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-                              <div className="space-y-2">
-                                {group.resources.map((r) => (
-                                  <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={allSubheadings} />
-                                ))}
-                              </div>
-                            </SortableContext>
-                          </DndContext>
-                        )}
-                      </SubheadingGroup>
-                    ))}
-                  </div>
+                      {grouped.map((group) => (
+                        <DroppableSubheadingGroup
+                          key={group.name}
+                          groupId={group.name}
+                          name={group.name}
+                          resources={group.resources}
+                          canManage={!!canManage}
+                          onDelete={(rid) => deleteResource.mutate(rid)}
+                          existingSubheadings={allSubheadings}
+                        />
+                      ))}
+                    </div>
+                  </DndContext>
                 )}
               </TabsContent>
             );
