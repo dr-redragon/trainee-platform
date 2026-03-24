@@ -245,16 +245,72 @@ const SpecialtyDetail = () => {
     reorderSubsections.mutate(updates);
   };
 
-  const handleDragEnd = (event: DragEndEvent, subsectionResources: Tables<"resources">[]) => {
+  const updateResourceSubheading = useMutation({
+    mutationFn: async ({ resourceId, subheading }: { resourceId: string; subheading: string | null }) => {
+      const { error } = await supabase
+        .from("resources")
+        .update({ subheading } as any)
+        .eq("id", resourceId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["resources"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const handleCrossGroupDragEnd = (event: DragEndEvent, subResources: Tables<"resources">[], allSubheadings: string[]) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = subsectionResources.findIndex((r) => r.id === active.id);
-    const newIndex = subsectionResources.findIndex((r) => r.id === over.id);
-    const reordered = arrayMove(subsectionResources, oldIndex, newIndex);
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Determine target group from the over element
+    let targetSubheading: string | null = null;
+    let isGroupDrop = false;
+
+    if (overId.startsWith("group:")) {
+      // Dropped directly onto a group droppable
+      isGroupDrop = true;
+      const groupKey = overId.replace("group:", "");
+      targetSubheading = groupKey === "__ungrouped__" ? null : groupKey;
+    } else {
+      // Dropped onto another resource — find that resource's subheading
+      const overResource = subResources.find((r) => r.id === overId);
+      if (overResource) {
+        targetSubheading = (overResource as any).subheading || null;
+      }
+    }
+
+    const activeResource = subResources.find((r) => r.id === activeId);
+    if (!activeResource) return;
+    const activeSubheading: string | null = (activeResource as any).subheading || null;
+
+    // If moving between groups, update the subheading
+    if (activeSubheading !== targetSubheading) {
+      // Optimistic update
+      queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
+        if (!old) return old;
+        return old.map((r) =>
+          r.id === activeId ? { ...r, subheading: targetSubheading } : r
+        );
+      });
+      updateResourceSubheading.mutate({ resourceId: activeId, subheading: targetSubheading });
+      return;
+    }
+
+    // Same group reorder
+    if (activeId === overId || isGroupDrop) return;
+    const groupResources = subResources
+      .filter((r) => ((r as any).subheading || null) === targetSubheading)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const oldIndex = groupResources.findIndex((r) => r.id === activeId);
+    const newIndex = groupResources.findIndex((r) => r.id === overId);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(groupResources, oldIndex, newIndex);
     const updates = reordered.map((r, i) => ({ id: r.id, sort_order: i }));
     queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
       if (!old) return old;
-      const otherResources = old.filter((r) => r.subsection_id !== subsectionResources[0]?.subsection_id);
+      const otherResources = old.filter((r) => !reordered.some((rr) => rr.id === r.id));
       return [...otherResources, ...reordered.map((r, i) => ({ ...r, sort_order: i }))];
     });
     reorderResources.mutate(updates);
