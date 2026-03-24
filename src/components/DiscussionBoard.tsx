@@ -18,6 +18,8 @@ interface DiscussionBoardProps {
   specialtyId: string;
 }
 
+type SortOption = "recent" | "oldest" | "most_upvoted" | "most_discussed";
+
 export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
   const queryClient = useQueryClient();
   const [newPostOpen, setNewPostOpen] = useState(false);
@@ -26,6 +28,7 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
   const [expandedPost, setExpandedPost] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>("recent");
   const { data: role } = useUserRole();
 
   const { data: currentUser } = useQuery({
