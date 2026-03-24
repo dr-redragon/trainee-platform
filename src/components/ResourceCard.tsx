@@ -26,9 +26,10 @@ interface ResourceCardProps {
   resource: Tables<"resources">;
   canManage: boolean;
   onDelete?: (id: string) => void;
+  existingSubheadings?: string[];
 }
 
-export function ResourceCard({ resource, canManage, onDelete }: ResourceCardProps) {
+export function ResourceCard({ resource, canManage, onDelete, existingSubheadings = [] }: ResourceCardProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -102,7 +103,7 @@ export function ResourceCard({ resource, canManage, onDelete }: ResourceCardProp
         </Card>
       </div>
       <ResourceViewer resource={resource} open={viewerOpen} onOpenChange={setViewerOpen} />
-      {canManage && <EditResourceDialog resource={resource} open={editOpen} onOpenChange={setEditOpen} />}
+      {canManage && <EditResourceDialog resource={resource} open={editOpen} onOpenChange={setEditOpen} existingSubheadings={existingSubheadings} />}
     </>
   );
 }
