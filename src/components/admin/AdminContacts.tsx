@@ -26,7 +26,7 @@ const categoryOptions: { value: Enums<"contact_category">; label: string }[] = [
   { value: "rota_admin", label: "Rota Coordinator / Admin" },
 ];
 
-const emptyForm = { name: "", role: "", category: "tpd" as Enums<"contact_category">, organisation: "", email: "", phone: "", specialty_id: "", archived: false };
+const emptyForm = { name: "", role: "", category: "tpd" as Enums<"contact_category">, organisation: "", email: "", phone: "", specialty_id: "none", archived: false };
 
 export function AdminContacts() {
   const queryClient = useQueryClient();
@@ -60,7 +60,7 @@ export function AdminContacts() {
       const payload = {
         name: form.name, role: form.role, category: form.category,
         organisation: form.organisation, email: form.email,
-        phone: form.phone || null, specialty_id: form.specialty_id || null, archived: form.archived,
+        phone: form.phone || null, specialty_id: form.specialty_id === "none" ? null : form.specialty_id, archived: form.archived,
       };
       if (editing) {
         const { error } = await supabase.from("contacts").update(payload).eq("id", editing.id);
@@ -94,7 +94,7 @@ export function AdminContacts() {
     setEditing(c);
     setForm({
       name: c.name, role: c.role, category: c.category, organisation: c.organisation,
-      email: c.email, phone: c.phone || "", specialty_id: c.specialty_id || "", archived: c.archived ?? false,
+      email: c.email, phone: c.phone || "", specialty_id: c.specialty_id || "none", archived: c.archived ?? false,
     });
     setDialogOpen(true);
   };
@@ -153,7 +153,7 @@ export function AdminContacts() {
                     <Select value={form.specialty_id} onValueChange={(v) => setForm((f) => ({ ...f, specialty_id: v }))}>
                       <SelectTrigger><SelectValue placeholder="All specialties" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All specialties</SelectItem>
+                        <SelectItem value="none">All specialties</SelectItem>
                         {specialties?.map((s) => <SelectItem key={s.id} value={s.id}>{s.short_name}</SelectItem>)}
                       </SelectContent>
                     </Select>
