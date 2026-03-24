@@ -147,7 +147,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               <CommandItem
                 key={r.id}
                 value={`resource-${r.title}`}
-                onSelect={() => go(`/specialty/${r.subsections.specialty_id}`)}
+                onSelect={() => go(`/specialty/${r.subsections.specialty_id}?subsection=${r.subsection_id}`)}
                 className="cursor-pointer"
               >
                 <FileText className="h-4 w-4 mr-2 shrink-0 text-muted-foreground" />
