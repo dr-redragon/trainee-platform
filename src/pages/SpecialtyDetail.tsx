@@ -20,7 +20,8 @@ import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { SortableTabTrigger } from "@/components/SortableTabTrigger";
 import type { Tables } from "@/integrations/supabase/types";
 
 const SpecialtyDetail = () => {
@@ -139,6 +140,26 @@ const SpecialtyDetail = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["resources"] }),
   });
 
+  const reorderSubsections = useMutation({
+    mutationFn: async (updates: { id: string; sort_order: number }[]) => {
+      for (const u of updates) {
+        await supabase.from("subsections").update({ sort_order: u.sort_order }).eq("id", u.id);
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subsections", id] }),
+  });
+
+  const handleSubsectionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !subsections) return;
+    const oldIndex = subsections.findIndex((s) => s.id === active.id);
+    const newIndex = subsections.findIndex((s) => s.id === over.id);
+    const reordered = arrayMove(subsections, oldIndex, newIndex);
+    const updates = reordered.map((s, i) => ({ id: s.id, sort_order: i }));
+    queryClient.setQueryData(["subsections", id], reordered.map((s, i) => ({ ...s, sort_order: i })));
+    reorderSubsections.mutate(updates);
+  };
+
   const handleDragEnd = (event: DragEndEvent, subsectionResources: Tables<"resources">[]) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -206,12 +227,27 @@ const SpecialtyDetail = () => {
         {/* Tabs */}
         <Tabs value={activeTab ?? defaultTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto bg-secondary/50 p-1">
-            {tabNames.map((tab) => (
-              <TabsTrigger key={tab} value={tab} className="text-xs whitespace-nowrap">
-                {tab === "Key Contacts" && <Users className="h-3 w-3 mr-1" />}
-                {tab}
-              </TabsTrigger>
-            ))}
+            {canManage && subsections?.length ? (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSubsectionDragEnd}>
+                <SortableContext items={subsections.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
+                  {subsections.map((sub) => (
+                    <SortableTabTrigger key={sub.id} id={sub.id} value={sub.name} canDrag>
+                      {sub.name}
+                    </SortableTabTrigger>
+                  ))}
+                </SortableContext>
+              </DndContext>
+            ) : (
+              subsections?.map((sub) => (
+                <TabsTrigger key={sub.id} value={sub.name} className="text-xs whitespace-nowrap">
+                  {sub.name}
+                </TabsTrigger>
+              ))
+            )}
+            <TabsTrigger value="Key Contacts" className="text-xs whitespace-nowrap">
+              <Users className="h-3 w-3 mr-1" />
+              Key Contacts
+            </TabsTrigger>
           </TabsList>
 
           {/* Resource subsection tabs */}
