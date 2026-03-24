@@ -30,6 +30,7 @@ interface ResourceCardProps {
 
 export function ResourceCard({ resource, canManage, onDelete }: ResourceCardProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: resource.id, disabled: !canManage });
 
