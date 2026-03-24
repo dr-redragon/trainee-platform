@@ -100,11 +100,13 @@ const Index = () => {
   });
 
   const { data: announcements } = useQuery({
-    queryKey: ["active-announcements"],
+    queryKey: ["active-announcements", activeDeanery?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("announcements").select("*").eq("is_active", true)
         .order("created_at", { ascending: false }).limit(3);
+      if (activeDeanery) query = query.eq("deanery_id", activeDeanery.id);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },

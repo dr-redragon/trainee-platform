@@ -5,15 +5,20 @@ import { ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getIcon } from "@/lib/iconMap";
+import { useDeanery } from "@/contexts/DeaneryContext";
 
 export function SpecialtiesWidget() {
+  const { activeDeanery } = useDeanery();
   const { data: specialties } = useQuery({
-    queryKey: ["my-specialties"],
+    queryKey: ["my-specialties", activeDeanery?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("specialties").select("*").order("sort_order");
+      let query = supabase.from("specialties").select("*").order("sort_order");
+      if (activeDeanery) query = query.eq("deanery_id", activeDeanery.id);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!activeDeanery,
   });
 
   const topLevel = specialties?.filter((s) => !(s as any).parent_specialty_id) ?? [];
