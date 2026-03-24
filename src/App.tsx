@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import SpecialtyDetail from "./pages/SpecialtyDetail";
 import KeyContacts from "./pages/KeyContacts";
 import AdminPanel from "./pages/AdminPanel";
+import MyProfile from "./pages/MyProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
