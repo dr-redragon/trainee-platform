@@ -16,14 +16,17 @@ interface EditResourceDialogProps {
   resource: Tables<"resources">;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  existingSubheadings?: string[];
 }
 
-export function EditResourceDialog({ resource, open, onOpenChange }: EditResourceDialogProps) {
+export function EditResourceDialog({ resource, open, onOpenChange, existingSubheadings = [] }: EditResourceDialogProps) {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(resource.title);
   const [description, setDescription] = useState(resource.description ?? "");
   const [resourceType, setResourceType] = useState(resource.resource_type);
   const [externalUrl, setExternalUrl] = useState(resource.external_url ?? "");
+  const [subheading, setSubheading] = useState((resource as any).subheading ?? "none");
+  const [customSubheading, setCustomSubheading] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [removeFile, setRemoveFile] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -36,6 +39,8 @@ export function EditResourceDialog({ resource, open, onOpenChange }: EditResourc
       setDescription(resource.description ?? "");
       setResourceType(resource.resource_type);
       setExternalUrl(resource.external_url ?? "");
+      setSubheading((resource as any).subheading ?? "none");
+      setCustomSubheading("");
       setFile(null);
       setRemoveFile(false);
     }
@@ -79,13 +84,16 @@ export function EditResourceDialog({ resource, open, onOpenChange }: EditResourc
         fileUrl = null;
       }
 
+      const finalSubheading = subheading === "__new__" ? customSubheading.trim() : (subheading === "none" ? null : subheading);
+
       const { error } = await supabase.from("resources").update({
         title: title.trim(),
         description: description.trim() || null,
         resource_type: resourceType as any,
         external_url: externalUrl.trim() || null,
         file_url: fileUrl,
-      }).eq("id", resource.id);
+        subheading: finalSubheading,
+      } as any).eq("id", resource.id);
       if (error) throw error;
     },
     onSuccess: () => {
