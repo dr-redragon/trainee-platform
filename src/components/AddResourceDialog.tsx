@@ -14,15 +14,18 @@ import { Constants } from "@/integrations/supabase/types";
 interface AddResourceDialogProps {
   subsectionId: string;
   specialtyId: string;
+  existingSubheadings?: string[];
 }
 
-export function AddResourceDialog({ subsectionId, specialtyId }: AddResourceDialogProps) {
+export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadings = [] }: AddResourceDialogProps) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [resourceType, setResourceType] = useState<string>("document");
   const [externalUrl, setExternalUrl] = useState("");
+  const [subheading, setSubheading] = useState("");
+  const [customSubheading, setCustomSubheading] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -76,6 +79,8 @@ export function AddResourceDialog({ subsectionId, specialtyId }: AddResourceDial
         .limit(1);
       const nextOrder = ((existing?.[0]?.sort_order ?? -1) + 1);
 
+      const finalSubheading = subheading === "__new__" ? customSubheading.trim() : subheading;
+
       const { error } = await supabase.from("resources").insert({
         title: title.trim(),
         description: description.trim() || null,
@@ -85,7 +90,8 @@ export function AddResourceDialog({ subsectionId, specialtyId }: AddResourceDial
         file_url: fileUrl,
         added_by: user?.id ?? null,
         sort_order: nextOrder,
-      });
+        subheading: finalSubheading || null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -103,6 +109,8 @@ export function AddResourceDialog({ subsectionId, specialtyId }: AddResourceDial
     setDescription("");
     setResourceType("document");
     setExternalUrl("");
+    setSubheading("");
+    setCustomSubheading("");
     setFile(null);
   };
 
