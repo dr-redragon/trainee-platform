@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,18 +16,14 @@ import { useDashboardPreferences, type WidgetId } from "@/hooks/useDashboardPref
 import { BookmarksWidget } from "@/components/dashboard/BookmarksWidget";
 import { WatchedDiscussionsWidget } from "@/components/dashboard/WatchedDiscussionsWidget";
 import { StarredContactsWidget } from "@/components/dashboard/StarredContactsWidget";
+import { SpecialtiesWidget } from "@/components/dashboard/SpecialtiesWidget";
+import { RecentResourcesWidget } from "@/components/dashboard/RecentResourcesWidget";
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors,
-  type DragEndEvent,
+  type DragEndEvent, DragOverlay, type DragStartEvent, type DragOverEvent,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { LucideIcon } from "lucide-react";
-
-const typeIcons: Record<string, LucideIcon> = {
-  pdf: FileText, video: Video, link: LinkIcon, document: BookOpen,
-  checklist: CheckSquare, folder: FolderOpen, presentation: BookOpen,
-};
 
 const WIDGET_LABELS: Record<WidgetId, string> = {
   announcements: "Announcements",
@@ -43,7 +39,7 @@ function SortableWidget({ id, children, isEditing }: { id: string; children: Rea
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.4 : 1,
   };
 
   return (
@@ -65,7 +61,8 @@ function SortableWidget({ id, children, isEditing }: { id: string; children: Rea
 const Index = () => {
   const { data: user } = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
-  const { layout, hiddenWidgets, columns, savePrefs } = useDashboardPreferences();
+  const [activeId, setActiveId] = useState<WidgetId | null>(null);
+  const { layout, hiddenWidgets, columns, rightColumnWidgets, savePrefs } = useDashboardPreferences();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -82,15 +79,6 @@ const Index = () => {
     enabled: !!user,
   });
 
-  const { data: specialties } = useQuery({
-    queryKey: ["my-specialties"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("specialties").select("*").order("sort_order");
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const { data: announcements } = useQuery({
     queryKey: ["active-announcements"],
     queryFn: async () => {
@@ -102,34 +90,95 @@ const Index = () => {
     },
   });
 
-  const { data: recentResources } = useQuery({
-    queryKey: ["recent-resources"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("resources")
-        .select("*, subsections!inner(specialty_id, specialties!inner(short_name))")
-        .order("created_at", { ascending: false }).limit(5);
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const firstName = profile?.first_name || "Trainee";
-  const topLevel = specialties?.filter((s) => !(s as any).parent_specialty_id) ?? [];
-  const childrenOf = (parentId: string) =>
-    specialties?.filter((s) => (s as any).parent_specialty_id === parentId) ?? [];
 
-  const visibleWidgets = layout.filter((w) => !hiddenWidgets.includes(w) && w !== "announcements");
+  // Compute visible widgets (excluding announcements and hidden)
+  const allVisible = layout.filter((w) => !hiddenWidgets.includes(w) && w !== "announcements");
+
+  // Split into left/right columns
+  const leftColumn = allVisible.filter((w) => !rightColumnWidgets.includes(w));
+  const rightColumn = allVisible.filter((w) => rightColumnWidgets.includes(w));
+
+  // For single-column or non-editing mode with 1 col, use flat list
+  const visibleWidgets = allVisible;
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as WidgetId);
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = visibleWidgets.indexOf(active.id as WidgetId);
-    const newIndex = visibleWidgets.indexOf(over.id as WidgetId);
-    const newOrder = arrayMove(visibleWidgets, oldIndex, newIndex);
-    // Keep hidden widgets at end
-    const fullLayout = [...newOrder, ...hiddenWidgets];
-    savePrefs.mutate({ widget_layout: fullLayout });
+
+    const activeWidget = active.id as WidgetId;
+    const overWidget = over.id as WidgetId;
+
+    if (columns === 2 && isEditing) {
+      // Determine which column each is in
+      const activeInRight = rightColumnWidgets.includes(activeWidget);
+      const overInRight = rightColumnWidgets.includes(overWidget);
+      const overIsDropzone = (overWidget as string) === "dropzone-left" || (overWidget as string) === "dropzone-right";
+
+      if (overIsDropzone) {
+        // Dropped on empty column dropzone
+        const newRight = (overWidget as string) === "dropzone-right"
+          ? [...rightColumnWidgets, activeWidget]
+          : rightColumnWidgets.filter((w) => w !== activeWidget);
+        savePrefs.mutate({ right_column_widgets: newRight });
+        return;
+      }
+
+      if (activeInRight === overInRight) {
+        // Same column — reorder within that column
+        const col = activeInRight ? [...rightColumn] : [...leftColumn];
+        const oldIdx = col.indexOf(activeWidget);
+        const newIdx = col.indexOf(overWidget);
+        const reordered = arrayMove(col, oldIdx, newIdx);
+
+        // Rebuild full layout preserving order
+        const newLayout = activeInRight
+          ? [...leftColumn, ...reordered, ...hiddenWidgets]
+          : [...reordered, ...rightColumn, ...hiddenWidgets];
+        savePrefs.mutate({ widget_layout: newLayout });
+      } else {
+        // Cross-column move
+        let newRight: WidgetId[];
+        if (activeInRight) {
+          // Moving from right to left
+          newRight = rightColumnWidgets.filter((w) => w !== activeWidget);
+        } else {
+          // Moving from left to right
+          newRight = [...rightColumnWidgets, activeWidget];
+        }
+
+        // Reorder: place active near over in the target column
+        const targetCol = overInRight
+          ? allVisible.filter((w) => newRight.includes(w))
+          : allVisible.filter((w) => !newRight.includes(w));
+        const overIdx = targetCol.indexOf(overWidget);
+        const withoutActive = targetCol.filter((w) => w !== activeWidget);
+        withoutActive.splice(overIdx, 0, activeWidget);
+
+        const otherCol = overInRight
+          ? allVisible.filter((w) => !newRight.includes(w) && w !== activeWidget)
+          : allVisible.filter((w) => newRight.includes(w) && w !== activeWidget);
+
+        const newLayout = [...(overInRight ? otherCol : withoutActive), ...(overInRight ? withoutActive : otherCol), ...hiddenWidgets];
+        savePrefs.mutate({ widget_layout: newLayout, right_column_widgets: newRight });
+      }
+    } else {
+      // Single column reorder
+      const oldIndex = visibleWidgets.indexOf(activeWidget);
+      const newIndex = visibleWidgets.indexOf(overWidget);
+      const newOrder = arrayMove(visibleWidgets, oldIndex, newIndex);
+      const fullLayout = [...newOrder, ...hiddenWidgets];
+      savePrefs.mutate({ widget_layout: fullLayout });
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    // Used for visual feedback — actual move happens on dragEnd
   };
 
   const toggleWidget = (widgetId: WidgetId) => {
@@ -142,122 +191,97 @@ const Index = () => {
   const renderWidget = (widgetId: WidgetId) => {
     switch (widgetId) {
       case "specialties":
-        return (
-          <div>
-            <h2 className="text-lg font-display font-semibold mb-4">Your Specialties</h2>
-            {!specialties?.length ? (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                  No specialties assigned yet. Contact your administrator.
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-6">
-                {topLevel.map((s) => {
-                  const SIcon = getIcon(s.icon_name);
-                  const color = s.color ?? "174 60% 40%";
-                  const children = childrenOf(s.id);
-                  return (
-                    <div key={s.id}>
-                      <Link to={`/specialty/${s.id}`}>
-                        <Card className="group hover:shadow-md hover:border-accent/40 transition-all duration-200 cursor-pointer mb-3">
-                          <CardContent className="p-5 flex items-center gap-4">
-                            <div
-                              className="flex h-10 w-10 items-center justify-center rounded-lg transition-transform group-hover:scale-110"
-                              style={{ backgroundColor: `hsl(${color} / 0.12)` }}
-                            >
-                              <SIcon className="h-5 w-5" style={{ color: `hsl(${color})` }} />
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-sm group-hover:text-accent transition-colors">{s.short_name}</h3>
-                              <p className="text-xs text-muted-foreground line-clamp-1">{s.name}</p>
-                            </div>
-                            {children.length > 0 && (
-                              <Badge variant="secondary" className="text-[10px]">{children.length} subspecialties</Badge>
-                            )}
-                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors" />
-                          </CardContent>
-                        </Card>
-                      </Link>
-                      {children.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 ml-6 pl-4 border-l-2 border-muted">
-                          {children.map((child) => {
-                            const CIcon = getIcon(child.icon_name);
-                            const cColor = child.color ?? "174 60% 40%";
-                            return (
-                              <Link key={child.id} to={`/specialty/${child.id}`}>
-                                <Card className="group hover:shadow-sm hover:border-accent/30 transition-all duration-200 cursor-pointer">
-                                  <CardContent className="p-4">
-                                    <div
-                                      className="flex h-8 w-8 items-center justify-center rounded-md mb-2 transition-transform group-hover:scale-110"
-                                      style={{ backgroundColor: `hsl(${cColor} / 0.12)` }}
-                                    >
-                                      <CIcon className="h-4 w-4" style={{ color: `hsl(${cColor})` }} />
-                                    </div>
-                                    <h4 className="text-xs font-medium group-hover:text-accent transition-colors">{child.short_name}</h4>
-                                  </CardContent>
-                                </Card>
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-
+        return <SpecialtiesWidget />;
       case "bookmarks":
         return <BookmarksWidget />;
-
       case "recent_resources":
-        return (
-          <div>
-            <h2 className="text-lg font-display font-semibold mb-4">Recently Added Resources</h2>
-            {!recentResources?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No resources added yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {recentResources.map((r: any) => {
-                  const Icon = typeIcons[r.resource_type] || FileText;
-                  const specName = r.subsections?.specialties?.short_name ?? "";
-                  return (
-                    <Card key={r.id} className="hover:shadow-sm transition-shadow cursor-pointer">
-                      <CardContent className="flex items-center gap-4 p-4">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary">
-                          <Icon className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium truncate">{r.title}</h4>
-                          <p className="text-xs text-muted-foreground">{specName}</p>
-                        </div>
-                        <Badge variant="secondary" className="text-[10px] shrink-0">{r.resource_type.toUpperCase()}</Badge>
-                        <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {new Date(r.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                        </span>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-
+        return <RecentResourcesWidget />;
       case "watched_discussions":
         return <WatchedDiscussionsWidget />;
-
       case "contacts":
         return <StarredContactsWidget />;
-
       default:
         return null;
     }
   };
+
+  const renderEditCard = (widgetId: WidgetId) => (
+    <SortableWidget key={widgetId} id={widgetId} isEditing>
+      <Card className="border-dashed">
+        <CardContent className="flex items-center justify-between p-3">
+          <span className="text-sm font-medium">{WIDGET_LABELS[widgetId]}</span>
+          <button
+            onClick={() => toggleWidget(widgetId)}
+            className="h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:scale-110 transition-transform"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </CardContent>
+      </Card>
+    </SortableWidget>
+  );
+
+  const renderViewCard = (widgetId: WidgetId) => {
+    const content = renderWidget(widgetId);
+    if (!content) return null;
+    return (
+      <SortableWidget key={widgetId} id={widgetId} isEditing={false}>
+        {content}
+      </SortableWidget>
+    );
+  };
+
+  const renderTwoColumnEditing = () => (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pl-8">
+      {/* Left column */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Left Column</p>
+        <SortableContext items={leftColumn} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
+            {leftColumn.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
+            )}
+            {leftColumn.map((wId) => renderEditCard(wId))}
+          </div>
+        </SortableContext>
+      </div>
+      {/* Right column */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Right Column</p>
+        <SortableContext items={rightColumn} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2 min-h-[60px] rounded-lg border-2 border-dashed border-muted p-2">
+            {rightColumn.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">Drag widgets here</p>
+            )}
+            {rightColumn.map((wId) => renderEditCard(wId))}
+          </div>
+        </SortableContext>
+      </div>
+    </div>
+  );
+
+  const renderTwoColumnView = () => (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-6">
+        <SortableContext items={leftColumn} strategy={verticalListSortingStrategy}>
+          {leftColumn.map((wId) => renderViewCard(wId))}
+        </SortableContext>
+      </div>
+      <div className="space-y-6">
+        <SortableContext items={rightColumn} strategy={verticalListSortingStrategy}>
+          {rightColumn.map((wId) => renderViewCard(wId))}
+        </SortableContext>
+      </div>
+    </div>
+  );
+
+  const renderSingleColumn = () => (
+    <SortableContext items={visibleWidgets} strategy={verticalListSortingStrategy}>
+      <div className={isEditing ? "space-y-2 pl-8" : "space-y-6"}>
+        {visibleWidgets.map((wId) => isEditing ? renderEditCard(wId) : renderViewCard(wId))}
+      </div>
+    </SortableContext>
+  );
 
   return (
     <DashboardLayout>
@@ -284,7 +308,7 @@ const Index = () => {
           <Card className="border-primary/20 bg-primary/5 animate-fade-in">
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Toggle widgets on or off, and drag to reorder:</p>
+                <p className="text-sm font-medium">Toggle widgets on or off, and drag to reorder{columns === 2 ? " between columns" : ""}:</p>
                 <div className="flex items-center gap-1 border rounded-md p-0.5">
                   <Button
                     variant={columns === 1 ? "secondary" : "ghost"}
@@ -348,37 +372,26 @@ const Index = () => {
         ) : null}
 
         {/* Sortable widgets */}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={visibleWidgets} strategy={verticalListSortingStrategy}>
-            <div className={`${isEditing ? "space-y-2 pl-8" : columns === 2 ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : "space-y-6"}`}>
-              {visibleWidgets.map((widgetId) => {
-                if (isEditing) {
-                  return (
-                    <SortableWidget key={widgetId} id={widgetId} isEditing>
-                      <Card className="border-dashed">
-                        <CardContent className="flex items-center justify-between p-3">
-                          <span className="text-sm font-medium">{WIDGET_LABELS[widgetId]}</span>
-                          <button
-                            onClick={() => toggleWidget(widgetId)}
-                            className="h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:scale-110 transition-transform"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </CardContent>
-                      </Card>
-                    </SortableWidget>
-                  );
-                }
-                const content = renderWidget(widgetId);
-                if (!content) return null;
-                return (
-                  <SortableWidget key={widgetId} id={widgetId} isEditing={false}>
-                    {content}
-                  </SortableWidget>
-                );
-              })}
-            </div>
-          </SortableContext>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragOver={handleDragOver}
+        >
+          {columns === 2
+            ? (isEditing ? renderTwoColumnEditing() : renderTwoColumnView())
+            : renderSingleColumn()
+          }
+          <DragOverlay>
+            {activeId && isEditing ? (
+              <Card className="border-dashed border-primary shadow-lg">
+                <CardContent className="flex items-center justify-between p-3">
+                  <span className="text-sm font-medium">{WIDGET_LABELS[activeId]}</span>
+                </CardContent>
+              </Card>
+            ) : null}
+          </DragOverlay>
         </DndContext>
       </div>
     </DashboardLayout>
