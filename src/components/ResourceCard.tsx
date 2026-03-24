@@ -78,6 +78,16 @@ export function ResourceCard({ resource, canManage, onDelete }: ResourceCardProp
             >
               <Eye className="h-4 w-4" />
             </Button>
+            {canManage && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0 text-muted-foreground hover:text-accent"
+                onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
             {canManage && onDelete && (
               <Button
                 variant="ghost"
@@ -92,6 +102,7 @@ export function ResourceCard({ resource, canManage, onDelete }: ResourceCardProp
         </Card>
       </div>
       <ResourceViewer resource={resource} open={viewerOpen} onOpenChange={setViewerOpen} />
+      {canManage && <EditResourceDialog resource={resource} open={editOpen} onOpenChange={setEditOpen} />}
     </>
   );
 }
