@@ -111,7 +111,12 @@ const Login = () => {
             </Button>
           </form>
 
-          <p className="text-center text-xs text-muted-foreground mt-8">
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Don't have an account?{" "}
+            <Link to="/request-access" className="text-accent hover:underline font-medium">Request Access</Link>
+          </p>
+
+          <p className="text-center text-xs text-muted-foreground mt-4">
             By signing in, you agree to our{" "}
             <a href="#" className="text-accent hover:underline">Privacy Policy</a>{" "}
             and{" "}
