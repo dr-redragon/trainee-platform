@@ -18,6 +18,8 @@ interface DiscussionBoardProps {
   specialtyId: string;
 }
 
+type SortOption = "recent" | "oldest" | "most_upvoted" | "most_discussed";
+
 export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
   const queryClient = useQueryClient();
   const [newPostOpen, setNewPostOpen] = useState(false);
@@ -26,6 +28,7 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
   const [expandedPost, setExpandedPost] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>("recent");
   const { data: role } = useUserRole();
 
   const { data: currentUser } = useQuery({
@@ -72,6 +75,22 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
       return data;
     },
     enabled: !!expandedPost,
+  });
+
+  const { data: commentCounts } = useQuery({
+    queryKey: ["discussion-comment-counts", specialtyId, discussions?.map(d => d.id).join()],
+    queryFn: async () => {
+      if (!discussions?.length) return {};
+      const { data, error } = await supabase
+        .from("discussion_comments")
+        .select("discussion_id")
+        .in("discussion_id", discussions.map((d) => d.id));
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      data.forEach((c) => { counts[c.discussion_id] = (counts[c.discussion_id] || 0) + 1; });
+      return counts;
+    },
+    enabled: !!discussions?.length,
   });
 
   const { data: votes } = useQuery({
@@ -218,34 +237,78 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
   const topLevelComments = comments?.filter((c) => !c.parent_id) ?? [];
   const getReplies = (parentId: string) => comments?.filter((c) => c.parent_id === parentId) ?? [];
 
+  const sortedDiscussions = (() => {
+    if (!discussions) return [];
+    const pinned = discussions.filter((d) => d.is_pinned);
+    const unpinned = discussions.filter((d) => !d.is_pinned);
+    const sorted = [...unpinned].sort((a, b) => {
+      switch (sortBy) {
+        case "oldest":
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "most_upvoted":
+          return getVoteCount(b.id) - getVoteCount(a.id);
+        case "most_discussed":
+          return (commentCounts?.[b.id] ?? 0) - (commentCounts?.[a.id] ?? 0);
+        case "recent":
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+    return [...pinned, ...sorted];
+  })();
+
+  const sortOptions: { value: SortOption; label: string }[] = [
+    { value: "recent", label: "Most Recent" },
+    { value: "oldest", label: "Oldest First" },
+    { value: "most_upvoted", label: "Most Upvoted" },
+    { value: "most_discussed", label: "Most Discussed" },
+  ];
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div>
           <h3 className="font-semibold text-sm">Discussion Board</h3>
           <p className="text-xs text-muted-foreground">Ask questions, share insights, and discuss with fellow trainees</p>
         </div>
-        <Dialog open={newPostOpen} onOpenChange={setNewPostOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> New Post</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Create Discussion Post</DialogTitle></DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-1.5">
-                <Label>Title</Label>
-                <Input value={postTitle} onChange={(e) => setPostTitle(e.target.value)} placeholder="What would you like to discuss?" />
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-md border bg-background">
+            {sortOptions.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSortBy(opt.value)}
+                className={`px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                  sortBy === opt.value
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                } first:rounded-l-md last:rounded-r-md`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <Dialog open={newPostOpen} onOpenChange={setNewPostOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> New Post</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Create Discussion Post</DialogTitle></DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div className="space-y-1.5">
+                  <Label>Title</Label>
+                  <Input value={postTitle} onChange={(e) => setPostTitle(e.target.value)} placeholder="What would you like to discuss?" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Content</Label>
+                  <Textarea value={postContent} onChange={(e) => setPostContent(e.target.value)} rows={5} placeholder="Share your thoughts, questions, or resources…" />
+                </div>
+                <Button className="w-full" onClick={() => createPost.mutate()} disabled={!postTitle.trim() || !postContent.trim() || createPost.isPending}>
+                  {createPost.isPending ? "Posting…" : "Post Discussion"}
+                </Button>
               </div>
-              <div className="space-y-1.5">
-                <Label>Content</Label>
-                <Textarea value={postContent} onChange={(e) => setPostContent(e.target.value)} rows={5} placeholder="Share your thoughts, questions, or resources…" />
-              </div>
-              <Button className="w-full" onClick={() => createPost.mutate()} disabled={!postTitle.trim() || !postContent.trim() || createPost.isPending}>
-                {createPost.isPending ? "Posting…" : "Post Discussion"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
@@ -259,7 +322,7 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
         </Card>
       ) : (
         <div className="space-y-3">
-          {discussions.map((post) => {
+          {sortedDiscussions.map((post) => {
             const voteCount = getVoteCount(post.id);
             const userVote = getUserVote(post.id);
             const isExpanded = expandedPost === post.id;
