@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Megaphone, ChevronDown, Plus, Trash2, X } from "lucide-react";
+import { Megaphone, ChevronDown, Plus, Trash2, X, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 
 interface SpecialtyNoticeBoardProps {
@@ -18,6 +18,8 @@ export function SpecialtyNoticeBoard({ specialtyId, canManage }: SpecialtyNotice
   const [open, setOpen] = useState(true);
   const [adding, setAdding] = useState(false);
   const [newContent, setNewContent] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
 
   const { data: currentUser } = useQuery({
     queryKey: ["current-user"],
@@ -87,6 +89,20 @@ export function SpecialtyNoticeBoard({ specialtyId, canManage }: SpecialtyNotice
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateNotice = useMutation({
+    mutationFn: async ({ id, content }: { id: string; content: string }) => {
+      const { error } = await supabase.from("specialty_notices" as any).update({ content } as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Notice updated");
+      queryClient.invalidateQueries({ queryKey: ["specialty-notices", specialtyId] });
+      setEditingId(null);
+      setEditContent("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const timeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
     if (seconds < 60) return "just now";
@@ -126,20 +142,52 @@ export function SpecialtyNoticeBoard({ specialtyId, canManage }: SpecialtyNotice
             {notices?.map((notice: any) => (
               <div key={notice.id} className="flex items-start gap-3 rounded-md bg-background/60 p-3 border">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm whitespace-pre-wrap">{notice.content}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    {getAuthorName(notice.author_id)} · {timeAgo(notice.created_at)}
-                  </p>
+                  {editingId === notice.id ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        rows={3}
+                        className="text-sm"
+                        autoFocus
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="outline" size="sm" onClick={() => { setEditingId(null); setEditContent(""); }}>
+                          <X className="h-3.5 w-3.5 mr-1" /> Cancel
+                        </Button>
+                        <Button size="sm" onClick={() => updateNotice.mutate({ id: notice.id, content: editContent })} disabled={!editContent.trim() || updateNotice.isPending}>
+                          <Check className="h-3.5 w-3.5 mr-1" /> {updateNotice.isPending ? "Saving…" : "Save"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm whitespace-pre-wrap">{notice.content}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {getAuthorName(notice.author_id)} · {timeAgo(notice.created_at)}
+                      </p>
+                    </>
+                  )}
                 </div>
-                {canManage && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0 h-7 w-7"
-                    onClick={() => deleteNotice.mutate(notice.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
+                {canManage && editingId !== notice.id && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => { setEditingId(notice.id); setEditContent(notice.content); }}
+                    >
+                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => deleteNotice.mutate(notice.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </div>
                 )}
               </div>
             ))}
