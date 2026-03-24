@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,8 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   FileText, Video, LinkIcon, BookOpen, CheckSquare, FolderOpen,
-  GripVertical, Trash2, ExternalLink, Download,
+  GripVertical, Trash2, Eye,
 } from "lucide-react";
+import { ResourceViewer } from "@/components/ResourceViewer";
 import type { Tables } from "@/integrations/supabase/types";
 
 const typeIcons: Record<string, typeof FileText> = {
@@ -26,6 +28,7 @@ interface ResourceCardProps {
 }
 
 export function ResourceCard({ resource, canManage, onDelete }: ResourceCardProps) {
+  const [viewerOpen, setViewerOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: resource.id, disabled: !canManage });
 
