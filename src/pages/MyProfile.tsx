@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { User, Mail, GraduationCap, Stethoscope, Save, Download, Trash2, Shield, Eye, UserCheck } from "lucide-react";
+import { User, Mail, GraduationCap, Stethoscope, Save, Download, Trash2, Shield, Eye, UserCheck, Lock } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -45,6 +45,9 @@ const MyProfile = () => {
   const [email, setEmail] = useState("");
   const [trainingGrade, setTrainingGrade] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
   const { data: user } = useQuery({
     queryKey: ["current-user"],
@@ -260,6 +263,60 @@ const MyProfile = () => {
             >
               <Save className="h-4 w-4" />
               {updateProfile.isPending ? "Saving…" : "Save Changes"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Change Password */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Lock className="h-5 w-5 text-accent" /> Change Password
+            </CardTitle>
+            <CardDescription>Update your password to keep your account secure</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="newPassword">New password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                placeholder="••••••••"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmNewPassword">Confirm new password</Label>
+              <Input
+                id="confirmNewPassword"
+                type="password"
+                placeholder="••••••••"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+              />
+            </div>
+            {newPassword && confirmNewPassword && newPassword !== confirmNewPassword && (
+              <p className="text-xs text-destructive">Passwords do not match</p>
+            )}
+            {newPassword && newPassword.length < 6 && (
+              <p className="text-xs text-destructive">Password must be at least 6 characters</p>
+            )}
+            <Button
+              disabled={!newPassword || newPassword.length < 6 || newPassword !== confirmNewPassword}
+              onClick={async () => {
+                const { error } = await supabase.auth.updateUser({ password: newPassword });
+                if (error) {
+                  toast.error(error.message);
+                } else {
+                  toast.success("Password updated successfully");
+                  setNewPassword("");
+                  setConfirmNewPassword("");
+                }
+              }}
+              className="gap-1.5"
+            >
+              <Lock className="h-4 w-4" /> Update Password
             </Button>
           </CardContent>
         </Card>
