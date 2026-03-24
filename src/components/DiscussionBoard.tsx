@@ -404,6 +404,9 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
                           onClick={() => setExpandedPost(isExpanded ? null : post.id)}
                         >
                           <MessageSquare className="h-3 w-3" />
+                          {(commentCounts?.[post.id] ?? 0) > 0 ? (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-semibold">{commentCounts[post.id]}</Badge>
+                          ) : null}
                           Comments
                           {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                         </button>
