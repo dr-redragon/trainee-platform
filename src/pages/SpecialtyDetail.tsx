@@ -149,7 +149,7 @@ const SpecialtyDetail = () => {
 
   const Icon = getIcon(specialty.icon_name);
   const color = specialty.color ?? "174 60% 40%";
-  const tabNames = [...(subsections?.map((s) => s.name) ?? []), "Key Contacts", "Discussion"];
+  const tabNames = [...(subsections?.map((s) => s.name) ?? []), "Key Contacts"];
   const defaultTab = subsections?.[0]?.name ?? "Key Contacts";
 
   return (
@@ -180,7 +180,6 @@ const SpecialtyDetail = () => {
             {tabNames.map((tab) => (
               <TabsTrigger key={tab} value={tab} className="text-xs whitespace-nowrap">
                 {tab === "Key Contacts" && <Users className="h-3 w-3 mr-1" />}
-                {tab === "Discussion" && <MessageSquare className="h-3 w-3 mr-1" />}
                 {tab}
               </TabsTrigger>
             ))}

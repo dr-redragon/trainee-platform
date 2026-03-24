@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, Users, Search, ChevronDown, ChevronRight,
-  BookOpen, LogOut, User, Shield
+  BookOpen, LogOut, User, Shield, MessageSquare
 } from "lucide-react";
 import { getIcon } from "@/lib/iconMap";
 import { useUserRole } from "@/hooks/useUserRole";
