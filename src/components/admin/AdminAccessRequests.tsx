@@ -52,9 +52,21 @@ export function AdminAccessRequests() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: (_, { status }) => {
+    onSuccess: (_, { id, status }) => {
       toast.success(`Request ${status}`);
       queryClient.invalidateQueries({ queryKey: ["access-requests"] });
+      // Send approval/rejection email to applicant
+      const req = requests?.find((r: any) => r.id === id);
+      if (req) {
+        supabase.functions.invoke("access-request-email", {
+          body: {
+            type: status,
+            applicant_email: req.email,
+            applicant_name: `${req.first_name} ${req.last_name}`,
+            review_note: status === "rejected" ? (reviewNote[id]?.trim() || undefined) : undefined,
+          },
+        }).catch((e) => console.error("Email notification error:", e));
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
