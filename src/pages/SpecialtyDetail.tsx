@@ -427,7 +427,7 @@ const SpecialtyDetail = () => {
                         <SortableContext items={ungrouped.map((r) => r.id)} strategy={verticalListSortingStrategy}>
                           <div className="space-y-2">
                             {ungrouped.map((r) => (
-                              <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={existingSubheadings} />
+                              <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={allSubheadings} />
                             ))}
                           </div>
                         </SortableContext>
@@ -440,7 +440,7 @@ const SpecialtyDetail = () => {
                           <SortableContext items={group.resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
                             <div className="space-y-2">
                               {group.resources.map((r) => (
-                                <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={existingSubheadings} />
+                                <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={allSubheadings} />
                               ))}
                             </div>
                           </SortableContext>
