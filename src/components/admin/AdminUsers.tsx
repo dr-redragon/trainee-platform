@@ -26,6 +26,7 @@ const roleConfig: Record<RoleName, { label: string; icon: typeof Shield; descrip
 
 export function AdminUsers() {
   const queryClient = useQueryClient();
+  const { data: currentUserRole } = useUserRole();
   const [search, setSearch] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
