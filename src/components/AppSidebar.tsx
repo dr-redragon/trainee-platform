@@ -78,7 +78,7 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <NavLink to="/" end activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                  <NavLink to="/dashboard" end activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
                     <LayoutDashboard className="h-4 w-4" />
                     {!collapsed && <span>Dashboard</span>}
                   </NavLink>
