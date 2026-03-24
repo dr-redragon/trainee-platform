@@ -119,7 +119,7 @@ const Index = () => {
   const childrenOf = (parentId: string) =>
     specialties?.filter((s) => (s as any).parent_specialty_id === parentId) ?? [];
 
-  const visibleWidgets = layout.filter((w) => !hiddenWidgets.includes(w));
+  const visibleWidgets = layout.filter((w) => !hiddenWidgets.includes(w) && w !== "announcements");
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -325,7 +325,7 @@ const Index = () => {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                {(Object.keys(WIDGET_LABELS) as WidgetId[]).map((wId) => {
+                {(Object.keys(WIDGET_LABELS) as WidgetId[]).filter((w) => w !== "announcements").map((wId) => {
                   const isHidden = hiddenWidgets.includes(wId);
                   return (
                     <Button
@@ -344,6 +344,28 @@ const Index = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Pinned Announcements — always at top */}
+        {announcements?.length ? (
+          <div className="space-y-3">
+            {announcements.map((a) => (
+              <Card key={a.id} className="border-accent/30 bg-accent/5">
+                <CardContent className="flex items-start gap-4 p-5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/10">
+                    <Megaphone className="h-5 w-5 text-accent" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm">{a.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{a.content}</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-2">
+                      {new Date(a.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : null}
 
         {/* Sortable widgets */}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
