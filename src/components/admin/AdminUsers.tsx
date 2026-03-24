@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,16 +10,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, UserPlus, Shield, ShieldOff, Trash2, Settings, UserCheck, Eye } from "lucide-react";
+import { Search, UserPlus, Shield, Trash2, Settings, UserCheck, Eye } from "lucide-react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
 type RoleName = "admin" | "facilitator" | "trainee";
 
-const roleConfig: Record<RoleName, { label: string; icon: typeof Shield; color: string; description: string }> = {
-  admin: { label: "Admin", icon: Shield, color: "text-destructive", description: "Full access to all content, users, and settings" },
-  facilitator: { label: "Facilitator", icon: UserCheck, color: "text-accent", description: "Can add/remove resources for assigned specialties" },
-  trainee: { label: "Trainee", icon: Eye, color: "text-muted-foreground", description: "View-only access to all resources" },
+const roleConfig: Record<RoleName, { label: string; icon: typeof Shield; description: string }> = {
+  admin: { label: "Admin", icon: Shield, description: "Full access to all content, users, and settings" },
+  facilitator: { label: "Facilitator", icon: UserCheck, description: "Can add/remove resources for assigned specialties" },
+  trainee: { label: "Trainee", icon: Eye, description: "View-only access to assigned specialties" },
 };
 
 export function AdminUsers() {
@@ -70,39 +70,60 @@ export function AdminUsers() {
     },
   });
 
+  const { data: traineeSpecs } = useQuery({
+    queryKey: ["trainee-specialties"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("trainee_specialties").select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const getUserRole = (userId: string): RoleName => {
     if (roles?.some((r) => r.user_id === userId && r.role === "admin")) return "admin";
     if (roles?.some((r) => r.user_id === userId && r.role === "facilitator")) return "facilitator";
     return "trainee";
   };
 
-  const getUserFacilitatorSpecs = (userId: string) => {
-    return facilitatorSpecs?.filter((fs) => fs.user_id === userId).map((fs) => fs.specialty_id) ?? [];
+  const getUserAssignedSpecs = (userId: string, role: RoleName) => {
+    if (role === "facilitator") {
+      return facilitatorSpecs?.filter((fs) => fs.user_id === userId).map((fs) => fs.specialty_id) ?? [];
+    }
+    if (role === "trainee") {
+      return traineeSpecs?.filter((ts) => ts.user_id === userId).map((ts) => ts.specialty_id) ?? [];
+    }
+    return [];
   };
 
   const updateRole = useMutation({
     mutationFn: async ({ userId, newRole, specialtyIds }: { userId: string; newRole: RoleName; specialtyIds: string[] }) => {
-      // Remove all non-trainee roles first
+      // Remove all non-trainee roles
       const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", userId).neq("role", "trainee");
       if (delErr) throw delErr;
 
-      // Remove all facilitator specialty assignments
-      const { error: fsDelErr } = await supabase.from("facilitator_specialties").delete().eq("user_id", userId);
-      if (fsDelErr) throw fsDelErr;
+      // Remove all specialty assignments
+      await supabase.from("facilitator_specialties").delete().eq("user_id", userId);
+      await supabase.from("trainee_specialties").delete().eq("user_id", userId);
 
-      // Add new role if not just trainee
       if (newRole === "admin") {
         const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "admin" });
         if (error) throw error;
       } else if (newRole === "facilitator") {
         const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "facilitator" });
         if (error) throw error;
-        // Add specialty assignments
         if (specialtyIds.length > 0) {
           const { error: fsErr } = await supabase.from("facilitator_specialties").insert(
             specialtyIds.map((sid) => ({ user_id: userId, specialty_id: sid }))
           );
           if (fsErr) throw fsErr;
+        }
+      } else {
+        // Trainee — assign specialty access
+        if (specialtyIds.length > 0) {
+          const { error: tsErr } = await supabase.from("trainee_specialties").insert(
+            specialtyIds.map((sid) => ({ user_id: userId, specialty_id: sid }))
+          );
+          if (tsErr) throw tsErr;
         }
       }
     },
@@ -110,6 +131,7 @@ export function AdminUsers() {
       toast.success("Permissions updated");
       queryClient.invalidateQueries({ queryKey: ["admin-roles"] });
       queryClient.invalidateQueries({ queryKey: ["facilitator-specialties"] });
+      queryClient.invalidateQueries({ queryKey: ["trainee-specialties"] });
       setPermDialogUser(null);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -126,9 +148,7 @@ export function AdminUsers() {
         },
       });
       if (error) throw error;
-      // Role assignment happens after the trigger creates the profile
       if (inviteRole !== "trainee" && data.user) {
-        // Small delay to let triggers fire
         await new Promise((r) => setTimeout(r, 500));
         if (inviteRole === "admin") {
           await supabase.from("user_roles").insert({ user_id: data.user.id, role: "admin" });
@@ -152,7 +172,6 @@ export function AdminUsers() {
 
   const deleteUser = useMutation({
     mutationFn: async (userId: string) => {
-      // Delete profile (cascade will handle roles, bookmarks etc.)
       const { error } = await supabase.from("profiles").delete().eq("user_id", userId);
       if (error) throw error;
     },
@@ -165,9 +184,10 @@ export function AdminUsers() {
   });
 
   const openPermissions = (profile: Tables<"profiles">) => {
+    const role = getUserRole(profile.user_id);
     setPermDialogUser(profile);
-    setSelectedRole(getUserRole(profile.user_id));
-    setSelectedSpecialties(getUserFacilitatorSpecs(profile.user_id));
+    setSelectedRole(role);
+    setSelectedSpecialties(getUserAssignedSpecs(profile.user_id, role));
   };
 
   const toggleSpecialty = (specId: string) => {
@@ -175,6 +195,12 @@ export function AdminUsers() {
       prev.includes(specId) ? prev.filter((s) => s !== specId) : [...prev, specId]
     );
   };
+
+  const selectAllSpecialties = () => {
+    if (specialties) setSelectedSpecialties(specialties.map((s) => s.id));
+  };
+
+  const clearAllSpecialties = () => setSelectedSpecialties([]);
 
   const filtered = profiles?.filter(
     (p) =>
@@ -184,6 +210,13 @@ export function AdminUsers() {
       p.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const specLabelFn = (role: RoleName, userId: string) => {
+    if (role === "admin") return "All";
+    const specs = getUserAssignedSpecs(userId, role);
+    if (specs.length === 0) return role === "trainee" ? "None assigned" : "—";
+    return specialties?.filter((s) => specs.includes(s.id)).map((s) => s.short_name).join(", ") ?? "—";
+  };
+
   return (
     <div className="space-y-4">
       {/* Role legend */}
@@ -191,7 +224,7 @@ export function AdminUsers() {
         {(Object.entries(roleConfig) as [RoleName, typeof roleConfig.admin][]).map(([key, cfg]) => (
           <Card key={key} className="border-dashed">
             <CardContent className="p-3 flex items-center gap-3">
-              <cfg.icon className={`h-5 w-5 ${cfg.color}`} />
+              <cfg.icon className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-xs font-semibold">{cfg.label}</p>
                 <p className="text-[10px] text-muted-foreground">{cfg.description}</p>
@@ -257,11 +290,11 @@ export function AdminUsers() {
           <div className="space-y-5 pt-2">
             <div className="space-y-2">
               <Label>Role</Label>
-              <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as RoleName)}>
+              <Select value={selectedRole} onValueChange={(v) => { setSelectedRole(v as RoleName); setSelectedSpecialties([]); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="trainee">
-                    <span className="flex items-center gap-2"><Eye className="h-3.5 w-3.5" /> Trainee — View only</span>
+                    <span className="flex items-center gap-2"><Eye className="h-3.5 w-3.5" /> Trainee — View assigned specialties</span>
                   </SelectItem>
                   <SelectItem value="facilitator">
                     <span className="flex items-center gap-2"><UserCheck className="h-3.5 w-3.5" /> Facilitator — Manage assigned specialties</span>
@@ -273,11 +306,23 @@ export function AdminUsers() {
               </Select>
             </div>
 
-            {selectedRole === "facilitator" && (
+            {(selectedRole === "facilitator" || selectedRole === "trainee") && (
               <div className="space-y-2">
-                <Label>Assigned Specialties</Label>
-                <p className="text-xs text-muted-foreground">This facilitator can add/edit/delete resources only within these specialties:</p>
-                <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto border rounded-md p-3">
+                <div className="flex items-center justify-between">
+                  <Label>
+                    {selectedRole === "facilitator" ? "Can manage resources in:" : "Can access resources in:"}
+                  </Label>
+                  <div className="flex gap-2">
+                    <button className="text-[10px] text-accent hover:underline" onClick={selectAllSpecialties}>Select all</button>
+                    <button className="text-[10px] text-muted-foreground hover:underline" onClick={clearAllSpecialties}>Clear</button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {selectedRole === "trainee"
+                    ? "This trainee will only see specialties ticked below."
+                    : "This facilitator can add/edit/delete resources only within these specialties."}
+                </p>
+                <div className="grid grid-cols-2 gap-1 max-h-60 overflow-y-auto border rounded-md p-3">
                   {specialties?.map((s) => (
                     <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5">
                       <Checkbox
@@ -289,7 +334,11 @@ export function AdminUsers() {
                   ))}
                 </div>
                 {selectedSpecialties.length === 0 && (
-                  <p className="text-xs text-destructive">Select at least one specialty</p>
+                  <p className="text-xs text-destructive">
+                    {selectedRole === "trainee"
+                      ? "⚠ No specialties selected — this user won't see any resources"
+                      : "Select at least one specialty"}
+                  </p>
                 )}
               </div>
             )}
@@ -301,11 +350,11 @@ export function AdminUsers() {
                   updateRole.mutate({
                     userId: permDialogUser.user_id,
                     newRole: selectedRole,
-                    specialtyIds: selectedRole === "facilitator" ? selectedSpecialties : [],
+                    specialtyIds: selectedRole === "admin" ? [] : selectedSpecialties,
                   });
                 }
               }}
-              disabled={updateRole.isPending || (selectedRole === "facilitator" && selectedSpecialties.length === 0)}
+              disabled={updateRole.isPending}
             >
               {updateRole.isPending ? "Saving…" : "Save Permissions"}
             </Button>
@@ -335,7 +384,6 @@ export function AdminUsers() {
               filtered.map((p) => {
                 const role = getUserRole(p.user_id);
                 const cfg = roleConfig[role];
-                const userFacSpecs = getUserFacilitatorSpecs(p.user_id);
                 return (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.first_name} {p.last_name}</TableCell>
@@ -348,11 +396,8 @@ export function AdminUsers() {
                         <cfg.icon className="h-3 w-3" /> {cfg.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {role === "facilitator" && userFacSpecs.length > 0
-                        ? specialties?.filter((s) => userFacSpecs.includes(s.id)).map((s) => s.short_name).join(", ")
-                        : role === "admin" ? "All" : "—"
-                      }
+                    <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate" title={specLabelFn(role, p.user_id)}>
+                      {specLabelFn(role, p.user_id)}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {new Date(p.created_at).toLocaleDateString("en-GB")}

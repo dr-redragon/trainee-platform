@@ -3,10 +3,11 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { specialties, defaultSubsections } from "@/lib/specialties";
 import { sampleContacts } from "@/lib/contacts";
 import { ContactCard } from "@/components/ContactCard";
+import { DiscussionBoard } from "@/components/DiscussionBoard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Video, LinkIcon, BookOpen, CheckSquare, FolderOpen, Plus, Users } from "lucide-react";
+import { FileText, Video, LinkIcon, BookOpen, CheckSquare, FolderOpen, Plus, Users, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const resourceTypeIcons: Record<string, typeof FileText> = {
@@ -25,7 +26,7 @@ const sampleResources = [
   { title: "NICE Guidelines — Quick Reference", type: "link", desc: "Link to relevant NICE clinical guidelines", date: "5 Mar 2026", author: "Admin" },
 ];
 
-const allTabs = [...defaultSubsections, "Key Contacts"];
+const allTabs = [...defaultSubsections, "Key Contacts", "Discussion"];
 
 const SpecialtyDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -68,6 +69,7 @@ const SpecialtyDetail = () => {
             {allTabs.map((tab) => (
               <TabsTrigger key={tab} value={tab} className="text-xs whitespace-nowrap">
                 {tab === "Key Contacts" && <Users className="h-3 w-3 mr-1" />}
+                {tab === "Discussion" && <MessageSquare className="h-3 w-3 mr-1" />}
                 {tab}
               </TabsTrigger>
             ))}
@@ -122,6 +124,11 @@ const SpecialtyDetail = () => {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          {/* Discussion tab */}
+          <TabsContent value="Discussion" className="mt-4">
+            <DiscussionBoard specialtyId={id!} />
           </TabsContent>
         </Tabs>
       </div>

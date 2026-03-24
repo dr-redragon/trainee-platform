@@ -153,6 +153,134 @@ export type Database = {
           },
         ]
       }
+      discussion_comments: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          discussion_id: string
+          id: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          discussion_id: string
+          id?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          discussion_id?: string
+          id?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_comments_discussion_id_fkey"
+            columns: ["discussion_id"]
+            isOneToOne: false
+            referencedRelation: "discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussion_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discussion_votes: {
+        Row: {
+          comment_id: string | null
+          created_at: string
+          discussion_id: string | null
+          id: string
+          user_id: string
+          vote_type: number
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string
+          discussion_id?: string | null
+          id?: string
+          user_id: string
+          vote_type: number
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string
+          discussion_id?: string | null
+          id?: string
+          user_id?: string
+          vote_type?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussion_votes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "discussion_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discussion_votes_discussion_id_fkey"
+            columns: ["discussion_id"]
+            isOneToOne: false
+            referencedRelation: "discussions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discussions: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          is_pinned: boolean | null
+          specialty_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean | null
+          specialty_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean | null
+          specialty_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discussions_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facilitator_specialties: {
         Row: {
           created_at: string
@@ -350,6 +478,35 @@ export type Database = {
           },
         ]
       }
+      trainee_specialties: {
+        Row: {
+          created_at: string
+          id: string
+          specialty_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          specialty_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          specialty_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainee_specialties_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -373,6 +530,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_specialty: {
+        Args: { _specialty_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_manage_resource: {
         Args: { _subsection_id: string; _user_id: string }
         Returns: boolean
