@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, UserPlus, Shield, Trash2, Settings, UserCheck, Eye, Crown } from "lucide-react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import { useUserRole } from "@/hooks/useUserRole";
 
 type RoleName = "super_admin" | "admin" | "facilitator" | "trainee";
 
