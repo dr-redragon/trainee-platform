@@ -64,6 +64,7 @@ export function AdminAccessRequests() {
             applicant_email: req.email,
             applicant_name: `${req.first_name} ${req.last_name}`,
             specialty_id: req.specialty_id || undefined,
+            deanery_id: req.deanery_id || undefined,
             specialty_name: getSpecialtyName(req.specialty_id),
             review_note: status === "rejected" ? (reviewNote[id]?.trim() || undefined) : undefined,
           },
