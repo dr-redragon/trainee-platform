@@ -348,7 +348,7 @@ const Index = () => {
         {/* Sortable widgets */}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={visibleWidgets} strategy={verticalListSortingStrategy}>
-            <div className={`space-y-${isEditing ? "2" : "6"} ${isEditing ? "pl-8" : ""}`}>
+            <div className={`${isEditing ? "space-y-2 pl-8" : columns === 2 ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : "space-y-6"}`}>
               {visibleWidgets.map((widgetId) => {
                 if (isEditing) {
                   return (
