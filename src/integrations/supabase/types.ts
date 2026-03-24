@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          reason: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          specialty_id: string | null
+          status: Database["public"]["Enums"]["request_status"]
+          training_grade: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          reason?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          specialty_id?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          training_grade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          reason?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          specialty_id?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          training_grade?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_requests_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           content: string
@@ -704,6 +760,7 @@ export type Database = {
         | "royal_college"
         | "trust_lead"
         | "rota_admin"
+      request_status: "pending" | "approved" | "rejected"
       resource_type:
         | "pdf"
         | "document"
@@ -850,6 +907,7 @@ export const Constants = {
         "trust_lead",
         "rota_admin",
       ],
+      request_status: ["pending", "approved", "rejected"],
       resource_type: [
         "pdf",
         "document",

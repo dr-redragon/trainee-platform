@@ -4,7 +4,8 @@ import { AdminUsers } from "@/components/admin/AdminUsers";
 import { AdminContent } from "@/components/admin/AdminContent";
 import { AdminContacts } from "@/components/admin/AdminContacts";
 import { AdminAnnouncements } from "@/components/admin/AdminAnnouncements";
-import { Shield, Users, BookOpen, Phone, Megaphone } from "lucide-react";
+import { AdminAccessRequests } from "@/components/admin/AdminAccessRequests";
+import { Shield, Users, BookOpen, Phone, Megaphone, UserPlus } from "lucide-react";
 
 const AdminPanel = () => {
   return (
@@ -34,12 +35,16 @@ const AdminPanel = () => {
             <TabsTrigger value="announcements" className="gap-1.5 text-xs">
               <Megaphone className="h-3.5 w-3.5" /> Announcements
             </TabsTrigger>
+            <TabsTrigger value="requests" className="gap-1.5 text-xs">
+              <UserPlus className="h-3.5 w-3.5" /> Access Requests
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="mt-4"><AdminUsers /></TabsContent>
           <TabsContent value="content" className="mt-4"><AdminContent /></TabsContent>
           <TabsContent value="contacts" className="mt-4"><AdminContacts /></TabsContent>
           <TabsContent value="announcements" className="mt-4"><AdminAnnouncements /></TabsContent>
+          <TabsContent value="requests" className="mt-4"><AdminAccessRequests /></TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>
