@@ -166,7 +166,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               <CommandItem
                 key={c.id}
                 value={`contact-${c.name}`}
-                onSelect={() => c.specialty_id ? go(`/specialty/${c.specialty_id}`) : undefined}
+                onSelect={() => c.specialty_id ? go(`/specialty/${c.specialty_id}#contacts`) : undefined}
                 className="cursor-pointer"
               >
                 <Users className="h-4 w-4 mr-2 shrink-0 text-muted-foreground" />
