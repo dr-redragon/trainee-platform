@@ -5,8 +5,8 @@ import {
   // Medical & Body
   Ear, Droplets, Dna, Microscope, TestTube, Scan, ScanLine,
   ShieldCheck, Cross, Radiation, Zap,
-  // Organs & Systems
-  Lungs, Ribbon, Waypoints, Sparkles, Flame,
+  // Systems
+  Ribbon, Waypoints, Sparkles, Flame,
   // General
   Clipboard, BookOpen, GraduationCap, Hospital, Ambulance,
   Beaker, Gauge, Clock, Target, Layers,
@@ -21,7 +21,7 @@ const iconMap: Record<string, LucideIcon> = {
   Stethoscope, Scissors, Syringe, Thermometer, Microscope,
   TestTube, Beaker, Scan, ScanLine, Pill,
   // Body parts & organs
-  Bone, Eye, Brain, Heart, Hand, Ear, Lungs, Smile, Baby,
+  Bone, Eye, Brain, Heart, Hand, Ear, Smile, Baby,
   // Medical concepts
   Activity, HeartPulse, Radio, CircleDot, Dna, Droplets,
   Radiation, Cross, ShieldCheck, Zap, Ribbon,
