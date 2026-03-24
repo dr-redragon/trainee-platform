@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { ContactCard } from "@/components/ContactCard";
-import { sampleContacts, contactCategories } from "@/lib/contacts";
-import { specialties } from "@/lib/specialties";
+import { contactCategories } from "@/lib/contacts";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,20 @@ const KeyContacts = () => {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  const filtered = sampleContacts.filter((c) => {
+  const { data: contacts = [] } = useQuery({
+    queryKey: ["all-contacts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("archived", false)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const filtered = contacts.filter((c) => {
     const matchesSearch =
       !search ||
       c.name.toLowerCase().includes(search.toLowerCase()) ||
