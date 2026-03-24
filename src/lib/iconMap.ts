@@ -46,7 +46,7 @@ import {
   Ratio, Binary, Hash, Percent,
   Shapes, Box, Cylinder, Cone, Triangle,
   Snowflake, Droplet, CloudSun, Sunrise, Sunset,
-  AirVent, UserCog,
+  AirVent, UserCog, Intestines,
   type LucideIcon,
 } from "lucide-react";
 
