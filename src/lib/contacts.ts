@@ -23,7 +23,7 @@ export const contactCategories = [
 ];
 
 export function obfuscateEmail(email: string): string {
-  return email.replace("@", " [at] ");
+  return email;
 }
 
 export const sampleContacts: Contact[] = [
