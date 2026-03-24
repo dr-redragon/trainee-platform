@@ -35,7 +35,7 @@ const Login = () => {
               <BookOpen className="h-6 w-6 text-accent" />
             </div>
             <h1 className="text-xl font-display font-semibold text-primary-foreground tracking-tight">
-              HST Training Hub
+              North West HST Training Hub
             </h1>
           </div>
           <h2 className="text-4xl font-display font-bold text-primary-foreground leading-tight mb-6">
@@ -46,7 +46,7 @@ const Login = () => {
           </p>
         </div>
         <p className="relative z-10 text-primary-foreground/40 text-sm">
-          © 2026 HST Training Hub. All rights reserved.
+          © 2026 North West HST Training Hub. All rights reserved.
         </p>
         {/* Decorative circles */}
         <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full border border-accent/10" />
@@ -61,7 +61,7 @@ const Login = () => {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <BookOpen className="h-5 w-5 text-primary-foreground" />
             </div>
-            <h1 className="text-lg font-display font-semibold tracking-tight">HST Training Hub</h1>
+            <h1 className="text-lg font-display font-semibold tracking-tight">North West HST Training Hub</h1>
           </div>
 
           <h2 className="text-2xl font-display font-bold mb-2">Welcome back</h2>
