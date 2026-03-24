@@ -51,6 +51,10 @@ const SpecialtyDetail = () => {
   const [renameSubName, setRenameSubName] = useState("");
   const [deleteSubId, setDeleteSubId] = useState<string | null>(null);
   const [deleteAction, setDeleteAction] = useState<"move" | "delete">("move");
+  const [addSubheadingForSub, setAddSubheadingForSub] = useState<string | null>(null);
+  const [newSubheadingName, setNewSubheadingName] = useState("");
+  // Track manually added (empty) subheadings per subsection so they show before any resource is assigned
+  const [manualSubheadings, setManualSubheadings] = useState<Record<string, string[]>>({});
   const [moveTargetId, setMoveTargetId] = useState<string>("");
 
   useEffect(() => {
