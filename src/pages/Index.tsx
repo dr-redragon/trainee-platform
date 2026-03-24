@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Clock, Megaphone, FileText, Video, LinkIcon, BookOpen, CheckSquare,
-  FolderOpen, ChevronRight, Settings2, GripVertical, Eye, EyeOff, X,
+  FolderOpen, ChevronRight, Settings2, GripVertical, Eye, EyeOff, X, Columns2, Rows3,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,7 +65,7 @@ function SortableWidget({ id, children, isEditing }: { id: string; children: Rea
 const Index = () => {
   const { data: user } = useCurrentUser();
   const [isEditing, setIsEditing] = useState(false);
-  const { layout, hiddenWidgets, savePrefs } = useDashboardPreferences();
+  const { layout, hiddenWidgets, columns, savePrefs } = useDashboardPreferences();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
