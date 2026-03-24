@@ -12,6 +12,7 @@ import {
   Plus, MessageSquare, ArrowBigUp, ArrowBigDown, Pin, Trash2, Clock, User, Send, ChevronDown, ChevronUp
 } from "lucide-react";
 import { toast } from "sonner";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface DiscussionBoardProps {
   specialtyId: string;
@@ -25,6 +26,7 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
   const [expandedPost, setExpandedPost] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const { data: role } = useUserRole();
 
   const { data: currentUser } = useQuery({
     queryKey: ["current-user"],
@@ -188,6 +190,20 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
     },
   });
 
+  const deleteComment = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("discussion_comments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Comment deleted");
+      queryClient.invalidateQueries({ queryKey: ["discussion-comments", expandedPost] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const isAdmin = role === "admin";
+
   const timeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
     if (seconds < 60) return "just now";
@@ -315,6 +331,7 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
                               getAuthorName={getAuthorName}
                               timeAgo={timeAgo}
                               currentUserId={currentUser?.id}
+                              isAdmin={isAdmin}
                               replyingTo={replyingTo}
                               setReplyingTo={setReplyingTo}
                               replyContent={replyContent}
@@ -324,6 +341,7 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
                               getVoteCount={(cid) => getVoteCount(undefined, cid)}
                               getUserVote={(cid) => getUserVote(undefined, cid)}
                               onVote={(cid, vt) => castVote.mutate({ commentId: cid, voteType: vt })}
+                              onDelete={(id) => deleteComment.mutate(id)}
                             />
                           ))}
 
@@ -365,6 +383,7 @@ interface CommentThreadProps {
   getAuthorName: (id: string) => string;
   timeAgo: (date: string) => string;
   currentUserId?: string;
+  isAdmin: boolean;
   replyingTo: string | null;
   setReplyingTo: (id: string | null) => void;
   replyContent: string;
@@ -374,12 +393,13 @@ interface CommentThreadProps {
   getVoteCount: (commentId: string) => number;
   getUserVote: (commentId: string) => number;
   onVote: (commentId: string, voteType: number) => void;
+  onDelete: (commentId: string) => void;
 }
 
 function CommentThread({
-  comment, replies, getAuthorName, timeAgo, currentUserId,
+  comment, replies, getAuthorName, timeAgo, currentUserId, isAdmin,
   replyingTo, setReplyingTo, replyContent, setReplyContent, onReply, isReplying,
-  getVoteCount, getUserVote, onVote,
+  getVoteCount, getUserVote, onVote, onDelete,
 }: CommentThreadProps) {
   const voteCount = getVoteCount(comment.id);
   const userVote = getUserVote(comment.id);
@@ -404,6 +424,11 @@ function CommentThread({
             <button className="hover:text-accent transition-colors" onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}>
               Reply
             </button>
+            {(currentUserId === comment.author_id || isAdmin) && (
+              <button className="hover:text-destructive transition-colors" onClick={() => onDelete(comment.id)}>
+                Delete
+              </button>
+            )}
           </div>
           {replyingTo === comment.id && (
             <div className="flex gap-2 mt-2">
@@ -434,6 +459,11 @@ function CommentThread({
                 <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
                   <span>{getAuthorName(r.author_id)}</span>
                   <span>{timeAgo(r.created_at)}</span>
+                  {(currentUserId === r.author_id || isAdmin) && (
+                    <button className="hover:text-destructive transition-colors" onClick={() => onDelete(r.id)}>
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
