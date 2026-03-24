@@ -16,14 +16,14 @@ const AdminPanel = () => {
           </div>
           <div>
             <h1 className="text-2xl font-display font-bold">Admin Panel</h1>
-            <p className="text-sm text-muted-foreground">Manage users, content, contacts, and announcements</p>
+            <p className="text-sm text-muted-foreground">Manage users, permissions, content, contacts, and announcements</p>
           </div>
         </div>
 
         <Tabs defaultValue="users" className="w-full">
           <TabsList className="bg-secondary/50 p-1">
             <TabsTrigger value="users" className="gap-1.5 text-xs">
-              <Users className="h-3.5 w-3.5" /> Users
+              <Users className="h-3.5 w-3.5" /> Users & Permissions
             </TabsTrigger>
             <TabsTrigger value="content" className="gap-1.5 text-xs">
               <BookOpen className="h-3.5 w-3.5" /> Content
@@ -36,18 +36,10 @@ const AdminPanel = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users" className="mt-4">
-            <AdminUsers />
-          </TabsContent>
-          <TabsContent value="content" className="mt-4">
-            <AdminContent />
-          </TabsContent>
-          <TabsContent value="contacts" className="mt-4">
-            <AdminContacts />
-          </TabsContent>
-          <TabsContent value="announcements" className="mt-4">
-            <AdminAnnouncements />
-          </TabsContent>
+          <TabsContent value="users" className="mt-4"><AdminUsers /></TabsContent>
+          <TabsContent value="content" className="mt-4"><AdminContent /></TabsContent>
+          <TabsContent value="contacts" className="mt-4"><AdminContacts /></TabsContent>
+          <TabsContent value="announcements" className="mt-4"><AdminAnnouncements /></TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>
