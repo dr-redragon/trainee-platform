@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { ContactCard } from "@/components/ContactCard";
 import { DiscussionBoard } from "@/components/DiscussionBoard";
 import { SpecialtyNoticeBoard } from "@/components/SpecialtyNoticeBoard";
-import { ResourceCard } from "@/components/ResourceCard";
+import { DroppableSubheadingGroup, DroppableUngrouped } from "@/components/DroppableSubheadingGroup";
 import { AddResourceDialog } from "@/components/AddResourceDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,7 +22,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2, ListPlus } from "lucide-react";
-import { SubheadingGroup } from "@/components/SubheadingGroup";
+
 import { toast } from "sonner";
 import { useCanManageSpecialty } from "@/hooks/useUserRole";
 import { getIcon } from "@/lib/iconMap";
@@ -30,7 +30,7 @@ import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { SortableContext, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { SortableTabTrigger } from "@/components/SortableTabTrigger";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -244,16 +244,72 @@ const SpecialtyDetail = () => {
     reorderSubsections.mutate(updates);
   };
 
-  const handleDragEnd = (event: DragEndEvent, subsectionResources: Tables<"resources">[]) => {
+  const updateResourceSubheading = useMutation({
+    mutationFn: async ({ resourceId, subheading }: { resourceId: string; subheading: string | null }) => {
+      const { error } = await supabase
+        .from("resources")
+        .update({ subheading } as any)
+        .eq("id", resourceId);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["resources"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const handleCrossGroupDragEnd = (event: DragEndEvent, subResources: Tables<"resources">[], allSubheadings: string[]) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = subsectionResources.findIndex((r) => r.id === active.id);
-    const newIndex = subsectionResources.findIndex((r) => r.id === over.id);
-    const reordered = arrayMove(subsectionResources, oldIndex, newIndex);
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Determine target group from the over element
+    let targetSubheading: string | null = null;
+    let isGroupDrop = false;
+
+    if (overId.startsWith("group:")) {
+      // Dropped directly onto a group droppable
+      isGroupDrop = true;
+      const groupKey = overId.replace("group:", "");
+      targetSubheading = groupKey === "__ungrouped__" ? null : groupKey;
+    } else {
+      // Dropped onto another resource — find that resource's subheading
+      const overResource = subResources.find((r) => r.id === overId);
+      if (overResource) {
+        targetSubheading = (overResource as any).subheading || null;
+      }
+    }
+
+    const activeResource = subResources.find((r) => r.id === activeId);
+    if (!activeResource) return;
+    const activeSubheading: string | null = (activeResource as any).subheading || null;
+
+    // If moving between groups, update the subheading
+    if (activeSubheading !== targetSubheading) {
+      // Optimistic update
+      queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
+        if (!old) return old;
+        return old.map((r) =>
+          r.id === activeId ? { ...r, subheading: targetSubheading } : r
+        );
+      });
+      updateResourceSubheading.mutate({ resourceId: activeId, subheading: targetSubheading });
+      return;
+    }
+
+    // Same group reorder
+    if (activeId === overId || isGroupDrop) return;
+    const groupResources = subResources
+      .filter((r) => ((r as any).subheading || null) === targetSubheading)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const oldIndex = groupResources.findIndex((r) => r.id === activeId);
+    const newIndex = groupResources.findIndex((r) => r.id === overId);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(groupResources, oldIndex, newIndex);
     const updates = reordered.map((r, i) => ({ id: r.id, sort_order: i }));
     queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
       if (!old) return old;
-      const otherResources = old.filter((r) => r.subsection_id !== subsectionResources[0]?.subsection_id);
+      const otherResources = old.filter((r) => !reordered.some((rr) => rr.id === r.id));
       return [...otherResources, ...reordered.map((r, i) => ({ ...r, sort_order: i }))];
     });
     reorderResources.mutate(updates);
@@ -421,39 +477,34 @@ const SpecialtyDetail = () => {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="space-y-4">
-                    {ungrouped.length > 0 && (
-                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, ungrouped)}>
-                        <SortableContext items={ungrouped.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-                          <div className="space-y-2">
-                            {ungrouped.map((r) => (
-                              <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={allSubheadings} />
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
-                    )}
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(e) => handleCrossGroupDragEnd(e, subResources, allSubheadings)}
+                  >
+                    <div className="space-y-4">
+                      {(ungrouped.length > 0 || canManage) && (
+                        <DroppableUngrouped
+                          resources={ungrouped}
+                          canManage={!!canManage}
+                          onDelete={(rid) => deleteResource.mutate(rid)}
+                          existingSubheadings={allSubheadings}
+                        />
+                      )}
 
-                    {grouped.map((group) => (
-                      <SubheadingGroup key={group.name} name={group.name} resourceIds={group.resources.map((r) => r.id)} canManage={!!canManage}>
-                        {group.resources.length === 0 ? (
-                          <div className="flex items-center justify-center py-6 text-xs text-muted-foreground border border-dashed rounded-md">
-                            No resources yet — use "Add Resource" and select this subheading
-                          </div>
-                        ) : (
-                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, group.resources)}>
-                            <SortableContext items={group.resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-                              <div className="space-y-2">
-                                {group.resources.map((r) => (
-                                  <ResourceCard key={r.id} resource={r} canManage={!!canManage} onDelete={(rid) => deleteResource.mutate(rid)} existingSubheadings={allSubheadings} />
-                                ))}
-                              </div>
-                            </SortableContext>
-                          </DndContext>
-                        )}
-                      </SubheadingGroup>
-                    ))}
-                  </div>
+                      {grouped.map((group) => (
+                        <DroppableSubheadingGroup
+                          key={group.name}
+                          groupId={group.name}
+                          name={group.name}
+                          resources={group.resources}
+                          canManage={!!canManage}
+                          onDelete={(rid) => deleteResource.mutate(rid)}
+                          existingSubheadings={allSubheadings}
+                        />
+                      ))}
+                    </div>
+                  </DndContext>
                 )}
               </TabsContent>
             );
