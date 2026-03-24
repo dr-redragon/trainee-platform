@@ -352,12 +352,15 @@ const SpecialtyDetail = () => {
               .filter((r) => r.subsection_id === sub.id)
               .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
-            const existingSubheadings = [...new Set(
+            const resourceSubheadings = [...new Set(
               subResources.map((r) => (r as any).subheading).filter(Boolean) as string[]
             )];
+            // Merge in any manually-added (empty) subheadings
+            const manual = manualSubheadings[sub.id] ?? [];
+            const allSubheadings = [...new Set([...resourceSubheadings, ...manual])];
 
             const ungrouped = subResources.filter((r) => !(r as any).subheading);
-            const grouped = existingSubheadings.map((sh) => ({
+            const grouped = allSubheadings.map((sh) => ({
               name: sh,
               resources: subResources.filter((r) => (r as any).subheading === sh),
             }));
@@ -369,7 +372,15 @@ const SpecialtyDetail = () => {
                   <div className="flex items-center gap-1">
                     {canManage && (
                       <>
-                        <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={existingSubheadings} />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs h-8"
+                          onClick={() => { setAddSubheadingForSub(sub.id); setNewSubheadingName(""); }}
+                        >
+                          <ListPlus className="h-3.5 w-3.5" /> Subheading
+                        </Button>
+                        <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={allSubheadings} />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -401,7 +412,7 @@ const SpecialtyDetail = () => {
                   </div>
                 </div>
 
-                {subResources.length === 0 ? (
+                {subResources.length === 0 && grouped.every(g => g.resources.length === 0) && grouped.length === 0 ? (
                   <Card className="border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                       <FolderOpen className="h-10 w-10 text-muted-foreground/30 mb-3" />
