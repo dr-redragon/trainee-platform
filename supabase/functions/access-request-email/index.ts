@@ -14,8 +14,16 @@ interface EmailPayload {
   applicant_email: string;
   applicant_name: string;
   specialty_name?: string;
+  specialty_id?: string;
   training_grade?: string;
   review_note?: string;
+}
+
+function getSupabaseAdmin() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
@@ -70,7 +78,7 @@ function newRequestAlertHtml(name: string, email: string, specialty: string, gra
     </div>`;
 }
 
-function approvedHtml(name: string) {
+function approvedHtml(name: string, resetLink: string) {
   return `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
       <h2 style="color:#1a1a2e;margin-bottom:16px">Access Approved ✅</h2>
@@ -79,14 +87,21 @@ function approvedHtml(name: string) {
         Great news! Your access request for the <strong>HST Training Hub</strong> has been approved.
       </p>
       <p style="color:#4a4a5a;line-height:1.6">
-        You should receive a separate email with your login credentials shortly.
-        If you don't receive it, please contact your specialty facilitator.
+        Click the button below to set your password and activate your account:
+      </p>
+      <div style="text-align:center;margin:28px 0">
+        <a href="${resetLink}" style="display:inline-block;background:#1a1a2e;color:#ffffff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
+          Set Your Password
+        </a>
+      </div>
+      <p style="color:#8a8a9a;font-size:13px">
+        This link will expire in 24 hours. If it expires, you can request a new one from the login page using "Forgot password".
       </p>
       <p style="color:#8a8a9a;font-size:13px;margin-top:32px">— HST Training Hub</p>
     </div>`;
 }
 
-function rejectedHtml(name: string, note?: string) {
+function rejectedHtml(name: string, reason: string) {
   return `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
       <h2 style="color:#1a1a2e;margin-bottom:16px">Access Request Update</h2>
@@ -94,7 +109,9 @@ function rejectedHtml(name: string, note?: string) {
       <p style="color:#4a4a5a;line-height:1.6">
         Unfortunately, your access request for the HST Training Hub was not approved at this time.
       </p>
-      ${note ? `<p style="color:#4a4a5a;line-height:1.6;background:#f8f8fc;padding:12px 16px;border-radius:8px;border-left:3px solid #ccc"><em>${note}</em></p>` : ""}
+      <p style="color:#4a4a5a;line-height:1.6;background:#f8f8fc;padding:12px 16px;border-radius:8px;border-left:3px solid #ccc">
+        <strong>Reason:</strong> <em>${reason}</em>
+      </p>
       <p style="color:#4a4a5a;line-height:1.6">
         If you believe this was in error, please contact your training programme director.
       </p>
@@ -115,24 +132,17 @@ Deno.serve(async (req) => {
       // Send confirmation to applicant
       await sendEmail(applicant_email, "Access Request Received — HST Training Hub", submissionConfirmationHtml(applicant_name));
 
-      // Also notify admins + facilitators for the chosen specialty
-      const supabaseAdmin = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      );
+      // Notify admins + facilitators for the chosen specialty
+      const supabaseAdmin = getSupabaseAdmin();
 
-      // Get admin user IDs
       const { data: adminRoles } = await supabaseAdmin
         .from("user_roles")
         .select("user_id")
         .eq("role", "admin");
-
       const adminIds = adminRoles?.map((r: any) => r.user_id) ?? [];
 
-      // Get facilitator user IDs for the chosen specialty
       let facilitatorIds: string[] = [];
       if (payload.specialty_name && payload.specialty_name !== "General") {
-        // Look up specialty ID by name
         const { data: specs } = await supabaseAdmin
           .from("specialties")
           .select("id")
@@ -146,31 +156,20 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Combine unique user IDs
       const notifyIds = [...new Set([...adminIds, ...facilitatorIds])];
-
-      // Get their emails from profiles
       if (notifyIds.length > 0) {
         const { data: profiles } = await supabaseAdmin
           .from("profiles")
           .select("email")
           .in("user_id", notifyIds);
-
         const emails = profiles?.map((p: any) => p.email).filter(Boolean) ?? [];
         const alertHtml = newRequestAlertHtml(
-          applicant_name,
-          applicant_email,
-          payload.specialty_name || "General",
-          payload.training_grade,
+          applicant_name, applicant_email,
+          payload.specialty_name || "General", payload.training_grade,
         );
-
-        // Send to each admin/facilitator individually (Resend test domain limitation)
         for (const email of emails) {
-          try {
-            await sendEmail(email, `New Access Request: ${applicant_name}`, alertHtml);
-          } catch (e) {
-            console.error(`Failed to notify ${email}:`, e);
-          }
+          try { await sendEmail(email, `New Access Request: ${applicant_name}`, alertHtml); }
+          catch (e) { console.error(`Failed to notify ${email}:`, e); }
         }
       }
 
@@ -180,14 +179,66 @@ Deno.serve(async (req) => {
     }
 
     if (type === "approved") {
-      await sendEmail(applicant_email, "Access Approved — HST Training Hub", approvedHtml(applicant_name));
-      return new Response(JSON.stringify({ success: true }), {
+      const supabaseAdmin = getSupabaseAdmin();
+
+      // 1. Create user account with a random temporary password
+      const tempPassword = crypto.randomUUID() + "!Aa1";
+      const nameParts = applicant_name.split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: applicant_email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { first_name: firstName, last_name: lastName },
+      });
+
+      if (createError) {
+        console.error("Failed to create user:", createError);
+        throw new Error(`Failed to create user account: ${createError.message}`);
+      }
+
+      // 2. Assign trainee to requested specialty if one was specified
+      if (newUser?.user && payload.specialty_id) {
+        await supabaseAdmin.from("trainee_specialties").insert({
+          user_id: newUser.user.id,
+          specialty_id: payload.specialty_id,
+        });
+      }
+
+      // 3. Generate a password reset link so user can set their own password
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: "recovery",
+        email: applicant_email,
+      });
+
+      if (linkError || !linkData) {
+        console.error("Failed to generate recovery link:", linkError);
+        // Account was created, fall back to telling user to use forgot password
+        await sendEmail(
+          applicant_email,
+          "Access Approved — HST Training Hub",
+          approvedHtml(applicant_name, "#"),
+        );
+      } else {
+        // The hashed_token is embedded in the action_link
+        const resetLink = linkData.properties?.action_link || "#";
+        await sendEmail(
+          applicant_email,
+          "Access Approved — HST Training Hub",
+          approvedHtml(applicant_name, resetLink),
+        );
+      }
+
+      return new Response(JSON.stringify({ success: true, user_id: newUser?.user?.id }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (type === "rejected") {
-      await sendEmail(applicant_email, "Access Request Update — HST Training Hub", rejectedHtml(applicant_name, payload.review_note));
+      const reason = payload.review_note || "No reason provided.";
+      await sendEmail(applicant_email, "Access Request Update — HST Training Hub", rejectedHtml(applicant_name, reason));
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
