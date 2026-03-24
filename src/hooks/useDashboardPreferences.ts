@@ -40,14 +40,16 @@ export function useDashboardPreferences() {
 
   const layout: WidgetId[] = (prefs?.widget_layout as WidgetId[] | null) ?? DEFAULT_LAYOUT;
   const hiddenWidgets: WidgetId[] = (prefs?.hidden_widgets as WidgetId[] | null) ?? [];
+  const columns: 1 | 2 = ((prefs as any)?.columns === 2 ? 2 : 1);
 
   const savePrefs = useMutation({
-    mutationFn: async (update: { widget_layout?: WidgetId[]; hidden_widgets?: WidgetId[] }) => {
+    mutationFn: async (update: { widget_layout?: WidgetId[]; hidden_widgets?: WidgetId[]; columns?: 1 | 2 }) => {
       if (!user) return;
       const payload = {
         user_id: user.id,
         widget_layout: update.widget_layout ?? layout,
         hidden_widgets: update.hidden_widgets ?? hiddenWidgets,
+        columns: update.columns ?? columns,
       };
       const { error } = await supabase
         .from("dashboard_preferences")
@@ -57,5 +59,5 @@ export function useDashboardPreferences() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["dashboard-preferences"] }),
   });
 
-  return { layout, hiddenWidgets, isLoading, savePrefs };
+  return { layout, hiddenWidgets, columns, isLoading, savePrefs };
 }
