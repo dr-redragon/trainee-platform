@@ -508,6 +508,54 @@ const SpecialtyDetail = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Add Subheading Dialog */}
+      <Dialog open={!!addSubheadingForSub} onOpenChange={(o) => { if (!o) { setAddSubheadingForSub(null); setNewSubheadingName(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Subheading</DialogTitle>
+            <DialogDescription>Create a subheading to group resources within this section.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1.5">
+              <Label>Subheading Name</Label>
+              <Input
+                value={newSubheadingName}
+                onChange={(e) => setNewSubheadingName(e.target.value)}
+                placeholder="e.g. Core Curriculum, Assessment Tools"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newSubheadingName.trim() && addSubheadingForSub) {
+                    setManualSubheadings((prev) => ({
+                      ...prev,
+                      [addSubheadingForSub]: [...(prev[addSubheadingForSub] ?? []), newSubheadingName.trim()],
+                    }));
+                    toast.success("Subheading added");
+                    setAddSubheadingForSub(null);
+                    setNewSubheadingName("");
+                  }
+                }}
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={!newSubheadingName.trim()}
+              onClick={() => {
+                if (addSubheadingForSub) {
+                  setManualSubheadings((prev) => ({
+                    ...prev,
+                    [addSubheadingForSub]: [...(prev[addSubheadingForSub] ?? []), newSubheadingName.trim()],
+                  }));
+                  toast.success("Subheading added");
+                  setAddSubheadingForSub(null);
+                  setNewSubheadingName("");
+                }
+              }}
+            >
+              Add Subheading
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Rename Section Dialog */}
       <Dialog open={!!renameSubId} onOpenChange={(o) => { if (!o) { setRenameSubId(null); setRenameSubName(""); } }}>
         <DialogContent>
