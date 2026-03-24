@@ -63,6 +63,8 @@ export function AdminAccessRequests() {
             type: status,
             applicant_email: req.email,
             applicant_name: `${req.first_name} ${req.last_name}`,
+            specialty_id: req.specialty_id || undefined,
+            specialty_name: getSpecialtyName(req.specialty_id),
             review_note: status === "rejected" ? (reviewNote[id]?.trim() || undefined) : undefined,
           },
         }).catch((e) => console.error("Email notification error:", e));
