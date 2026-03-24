@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ExternalLink, Download, FileText, AlertTriangle } from "lucide-react";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import type { Tables } from "@/integrations/supabase/types";
@@ -52,26 +51,7 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
   const ytId = isYouTube(resource);
   const video = isVideo(resource);
 
-  const handleOpen = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (rawUrl) window.open(rawUrl, "_blank", "noopener,noreferrer");
-  };
 
-  const handleDownload = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (resource.file_url) {
-      const a = document.createElement("a");
-      a.href = resource.file_url;
-      a.download = resource.title || "download";
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -94,14 +74,29 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
             {resource.resource_type.toUpperCase()}
           </Badge>
           {rawUrl && (
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleOpen}>
+            <a
+              href={rawUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
               <ExternalLink className="h-3 w-3" /> Open
-            </Button>
+            </a>
           )}
           {resource.file_url && (
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={handleDownload}>
+            <a
+              href={resource.file_url}
+              download={resource.title || "download"}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
               <Download className="h-3 w-3" /> Download
-            </Button>
+            </a>
           )}
         </div>
 
@@ -133,9 +128,16 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
               <AlertTriangle className="h-10 w-10 opacity-40" />
               <p className="text-sm">No viewable content available for this resource.</p>
               {rawUrl && (
-                <Button variant="outline" size="sm" onClick={handleOpen}>
+                <a
+                  href={rawUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
                   Open in new tab <ExternalLink className="h-3 w-3 ml-1" />
-                </Button>
+                </a>
               )}
             </div>
           )}
