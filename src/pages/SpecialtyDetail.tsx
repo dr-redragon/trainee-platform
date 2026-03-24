@@ -194,7 +194,7 @@ const SpecialtyDetail = () => {
         <SpecialtyNoticeBoard specialtyId={id!} canManage={!!canManage} />
 
         {/* Tabs */}
-        <Tabs defaultValue={defaultTab} className="w-full">
+        <Tabs value={activeTab ?? defaultTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto bg-secondary/50 p-1">
             {tabNames.map((tab) => (
               <TabsTrigger key={tab} value={tab} className="text-xs whitespace-nowrap">
