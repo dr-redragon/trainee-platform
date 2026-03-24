@@ -319,6 +319,7 @@ export type Database = {
           id: string
           last_name: string | null
           specialty_id: string | null
+          training_grade: string | null
           updated_at: string
           user_id: string
         }
@@ -330,6 +331,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           specialty_id?: string | null
+          training_grade?: string | null
           updated_at?: string
           user_id: string
         }
@@ -341,6 +343,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           specialty_id?: string | null
+          training_grade?: string | null
           updated_at?: string
           user_id?: string
         }
