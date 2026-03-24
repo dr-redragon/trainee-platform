@@ -77,6 +77,15 @@ const SpecialtyDetail = () => {
     enabled: !!id,
   });
 
+  // Set active tab from subsection query param
+  useEffect(() => {
+    const subsectionId = searchParams.get("subsection");
+    if (subsectionId && subsections) {
+      const match = subsections.find((s) => s.id === subsectionId);
+      if (match) setActiveTab(match.name);
+    }
+  }, [searchParams, subsections]);
+
   // Fetch all resources for this specialty's subsections
   const subsectionIds = subsections?.map((s) => s.id) ?? [];
   const { data: resources } = useQuery({
