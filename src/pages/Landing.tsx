@@ -25,7 +25,7 @@ const features = [
   {
     icon: Shield,
     title: "Secure & GDPR Compliant",
-    desc: "NHS-grade security with role-based access. Your data is never shared with third parties.",
+    desc: "Encrypted security with role-based access. Your data is never shared with third parties.",
   },
 ];
 
