@@ -39,39 +39,57 @@ export function ResourceCard({ resource, canManage, onDelete }: ResourceCardProp
   };
 
   const Icon = typeIcons[resource.resource_type] || FileText;
-  const url = resource.external_url || resource.file_url || resource.embed_url;
 
   return (
-    <div ref={setNodeRef} style={style}>
-      <Card className={`transition-shadow ${isDragging ? "shadow-lg ring-2 ring-accent/30" : "hover:shadow-sm"}`}>
-        <CardContent className="flex items-center gap-3 p-3">
-          {canManage && (
-            <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none">
-              <GripVertical className="h-4 w-4" />
-            </button>
-          )}
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary">
-            <Icon className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-medium truncate">{resource.title}</h4>
-            {resource.description && (
-              <p className="text-xs text-muted-foreground line-clamp-1">{resource.description}</p>
+    <>
+      <div ref={setNodeRef} style={style}>
+        <Card
+          className={`transition-shadow cursor-pointer ${isDragging ? "shadow-lg ring-2 ring-accent/30" : "hover:shadow-sm hover:border-accent/30"}`}
+          onClick={() => setViewerOpen(true)}
+        >
+          <CardContent className="flex items-center gap-3 p-3">
+            {canManage && (
+              <button
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GripVertical className="h-4 w-4" />
+              </button>
             )}
-          </div>
-          <Badge variant="secondary" className="text-[10px] shrink-0">{resource.resource_type.toUpperCase()}</Badge>
-          {url && (
-            <a href={url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-accent">
-              {resource.file_url ? <Download className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
-            </a>
-          )}
-          {canManage && onDelete && (
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onDelete(resource.id)}>
-              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary">
+              <Icon className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-medium truncate">{resource.title}</h4>
+              {resource.description && (
+                <p className="text-xs text-muted-foreground line-clamp-1">{resource.description}</p>
+              )}
+            </div>
+            <Badge variant="secondary" className="text-[10px] shrink-0">{resource.resource_type.toUpperCase()}</Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-accent"
+              onClick={(e) => { e.stopPropagation(); setViewerOpen(true); }}
+            >
+              <Eye className="h-4 w-4" />
             </Button>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            {canManage && onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={(e) => { e.stopPropagation(); onDelete(resource.id); }}
+              >
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      <ResourceViewer resource={resource} open={viewerOpen} onOpenChange={setViewerOpen} />
+    </>
   );
 }
