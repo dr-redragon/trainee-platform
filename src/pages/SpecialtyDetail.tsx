@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, MessageSquare, FolderOpen } from "lucide-react";
+import { SubheadingGroup } from "@/components/SubheadingGroup";
 import { toast } from "sonner";
 import { useCanManageSpecialty } from "@/hooks/useUserRole";
 import { getIcon } from "@/lib/iconMap";
@@ -260,14 +261,12 @@ const SpecialtyDetail = () => {
 
                     {/* Grouped resources by subheading */}
                     {grouped.map((group) => (
-                      <div key={group.name} className="space-y-2">
-                        <div className="flex items-center gap-2 pt-2">
-                          <div className="h-px flex-1 bg-border" />
-                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
-                            {group.name}
-                          </h4>
-                          <div className="h-px flex-1 bg-border" />
-                        </div>
+                      <SubheadingGroup
+                        key={group.name}
+                        name={group.name}
+                        resourceIds={group.resources.map((r) => r.id)}
+                        canManage={!!canManage}
+                      >
                         <DndContext
                           sensors={sensors}
                           collisionDetection={closestCenter}
@@ -287,7 +286,7 @@ const SpecialtyDetail = () => {
                             </div>
                           </SortableContext>
                         </DndContext>
-                      </div>
+                      </SubheadingGroup>
                     ))}
                   </div>
                 )}
