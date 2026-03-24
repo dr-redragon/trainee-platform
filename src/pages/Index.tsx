@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getIcon } from "@/lib/iconMap";
 import { useCurrentUser } from "@/hooks/useUserRole";
+import { useDeanery } from "@/contexts/DeaneryContext";
 import { useDashboardPreferences, type WidgetId } from "@/hooks/useDashboardPreferences";
 import { BookmarksWidget } from "@/components/dashboard/BookmarksWidget";
 import { WatchedDiscussionsWidget } from "@/components/dashboard/WatchedDiscussionsWidget";
@@ -80,6 +81,7 @@ function DroppableColumn({ id, children, label }: { id: string; children: React.
 
 const Index = () => {
   const { data: user } = useCurrentUser();
+  const { activeDeanery } = useDeanery();
   const [isEditing, setIsEditing] = useState(false);
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
   const { layout, hiddenWidgets, columns, rightColumnWidgets, savePrefs } = useDashboardPreferences();
