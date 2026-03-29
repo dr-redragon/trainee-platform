@@ -132,6 +132,7 @@ export function ResourceFolder({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOver(false);
     if (e.dataTransfer.files.length) {
       handleBulkUpload(e.dataTransfer.files);
