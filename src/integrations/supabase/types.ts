@@ -878,7 +878,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profile_display_names: {
+        Row: {
+          first_name: string | null
+          last_name: string | null
+          user_id: string | null
+        }
+        Insert: {
+          first_name?: string | null
+          last_name?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          first_name?: string | null
+          last_name?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_access_specialty: {
