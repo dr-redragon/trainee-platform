@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   FileText, Video, LinkIcon, BookOpen, CheckSquare, FolderOpen,
-  GripVertical, Trash2, Eye, Pencil, Bookmark, Square, CheckSquare,
+  GripVertical, Trash2, Eye, Pencil, Bookmark, Square,
 } from "lucide-react";
 import { ResourceViewer } from "@/components/ResourceViewer";
 import { EditResourceDialog } from "@/components/EditResourceDialog";
