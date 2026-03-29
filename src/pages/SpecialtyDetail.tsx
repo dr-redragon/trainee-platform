@@ -649,41 +649,53 @@ const SpecialtyDetail = () => {
                     {canManage && (
                       <>
                         <Button
-                          variant="outline"
+                          variant={selectMode ? "default" : "outline"}
                           size="sm"
                           className="gap-1 text-xs h-8"
-                          onClick={() => { setAddSubheadingForSub(sub.id); setNewSubheadingName(""); }}
+                          onClick={() => selectMode ? clearSelection() : setSelectMode(true)}
                         >
-                          <ListPlus className="h-3.5 w-3.5" /> Subheading
+                          <CheckSquare className="h-3.5 w-3.5" /> {selectMode ? "Cancel" : "Select"}
                         </Button>
-                        <AddFolderDialog subsectionId={sub.id} />
-                        <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={allSubheadings} />
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setRenameSubId(sub.id);
-                              setRenameSubName(sub.name);
-                            }}>
-                              <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Section
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => {
-                                setDeleteSubId(sub.id);
-                                setDeleteAction(otherSubsections.length > 0 ? "move" : "delete");
-                                const others = subsections?.filter((s) => s.id !== sub.id) ?? [];
-                                setMoveTargetId(others[0]?.id ?? "");
-                              }}
+                        {!selectMode && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1 text-xs h-8"
+                              onClick={() => { setAddSubheadingForSub(sub.id); setNewSubheadingName(""); }}
                             >
-                              <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Section
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <ListPlus className="h-3.5 w-3.5" /> Subheading
+                            </Button>
+                            <AddFolderDialog subsectionId={sub.id} />
+                            <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={allSubheadings} />
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => {
+                                  setRenameSubId(sub.id);
+                                  setRenameSubName(sub.name);
+                                }}>
+                                  <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Section
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    setDeleteSubId(sub.id);
+                                    setDeleteAction(otherSubsections.length > 0 ? "move" : "delete");
+                                    const others = subsections?.filter((s) => s.id !== sub.id) ?? [];
+                                    setMoveTargetId(others[0]?.id ?? "");
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Section
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
