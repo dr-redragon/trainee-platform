@@ -23,7 +23,8 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2, ListPlus } from "lucide-react";
+import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2, ListPlus, CheckSquare } from "lucide-react";
+import { BulkActionBar } from "@/components/BulkActionBar";
 
 import { toast } from "sonner";
 import { useCanManageSpecialty } from "@/hooks/useUserRole";
@@ -60,6 +61,105 @@ const SpecialtyDetail = () => {
   const [moveTargetId, setMoveTargetId] = useState<string>("");
   const [nativeDropSub, setNativeDropSub] = useState<string | null>(null);
   const [nativeDropUploading, setNativeDropUploading] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(new Set());
+  const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+
+  const toggleSelectResource = (id: string) => {
+    setSelectedResourceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectFolder = (folderId: string, resourceIds: string[]) => {
+    setSelectedFolderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+        // Also deselect contained resources
+        setSelectedResourceIds((rPrev) => {
+          const rNext = new Set(rPrev);
+          resourceIds.forEach((id) => rNext.delete(id));
+          return rNext;
+        });
+      } else {
+        next.add(folderId);
+        // Also select contained resources
+        setSelectedResourceIds((rPrev) => {
+          const rNext = new Set(rPrev);
+          resourceIds.forEach((id) => rNext.add(id));
+          return rNext;
+        });
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectMode(false);
+    setSelectedResourceIds(new Set());
+    setSelectedFolderIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      // Delete selected folders and their contents
+      for (const folderId of selectedFolderIds) {
+        const folderResources = (resources ?? []).filter((r) => (r as any).folder_id === folderId);
+        for (const r of folderResources) {
+          await supabase.from("resources").delete().eq("id", r.id);
+        }
+        await supabase.from("resource_folders").delete().eq("id", folderId);
+      }
+      // Delete individually selected resources (not already deleted via folder)
+      for (const rid of selectedResourceIds) {
+        const resource = (resources ?? []).find((r) => r.id === rid);
+        if (resource && !selectedFolderIds.has((resource as any).folder_id ?? "")) {
+          await supabase.from("resources").delete().eq("id", rid);
+        }
+      }
+      toast.success("Selected items deleted");
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      queryClient.invalidateQueries({ queryKey: ["resource-folders"] });
+      clearSelection();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const handleBulkDownload = async () => {
+    setBulkDownloading(true);
+    try {
+      const toDownload = (resources ?? []).filter((r) => selectedResourceIds.has(r.id));
+      for (const r of toDownload) {
+        const url = r.file_url || r.external_url;
+        if (url) {
+          const a = document.createElement("a");
+          a.href = url;
+          a.target = "_blank";
+          a.download = r.title;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          // Small delay between downloads
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+      }
+      toast.success(`${toDownload.length} file(s) downloading`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBulkDownloading(false);
+    }
+  };
 
   const handleNativeFileDrop = async (e: React.DragEvent, subsectionId: string) => {
     e.preventDefault();
@@ -549,41 +649,53 @@ const SpecialtyDetail = () => {
                     {canManage && (
                       <>
                         <Button
-                          variant="outline"
+                          variant={selectMode ? "default" : "outline"}
                           size="sm"
                           className="gap-1 text-xs h-8"
-                          onClick={() => { setAddSubheadingForSub(sub.id); setNewSubheadingName(""); }}
+                          onClick={() => selectMode ? clearSelection() : setSelectMode(true)}
                         >
-                          <ListPlus className="h-3.5 w-3.5" /> Subheading
+                          <CheckSquare className="h-3.5 w-3.5" /> {selectMode ? "Cancel" : "Select"}
                         </Button>
-                        <AddFolderDialog subsectionId={sub.id} />
-                        <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={allSubheadings} />
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setRenameSubId(sub.id);
-                              setRenameSubName(sub.name);
-                            }}>
-                              <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Section
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => {
-                                setDeleteSubId(sub.id);
-                                setDeleteAction(otherSubsections.length > 0 ? "move" : "delete");
-                                const others = subsections?.filter((s) => s.id !== sub.id) ?? [];
-                                setMoveTargetId(others[0]?.id ?? "");
-                              }}
+                        {!selectMode && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1 text-xs h-8"
+                              onClick={() => { setAddSubheadingForSub(sub.id); setNewSubheadingName(""); }}
                             >
-                              <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Section
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <ListPlus className="h-3.5 w-3.5" /> Subheading
+                            </Button>
+                            <AddFolderDialog subsectionId={sub.id} />
+                            <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={allSubheadings} />
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => {
+                                  setRenameSubId(sub.id);
+                                  setRenameSubName(sub.name);
+                                }}>
+                                  <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Section
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    setDeleteSubId(sub.id);
+                                    setDeleteAction(otherSubsections.length > 0 ? "move" : "delete");
+                                    const others = subsections?.filter((s) => s.id !== sub.id) ?? [];
+                                    setMoveTargetId(others[0]?.id ?? "");
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Section
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
@@ -606,11 +718,14 @@ const SpecialtyDetail = () => {
                     <div className="space-y-4">
                       {(ungrouped.length > 0 || ungroupedFolders.length > 0 || canManage) && (
                         <>
-                          <DroppableUngrouped
+                         <DroppableUngrouped
                             resources={ungrouped}
                             canManage={!!canManage}
                             onDelete={(rid) => deleteResource.mutate(rid)}
                             existingSubheadings={allSubheadings}
+                            selectable={selectMode}
+                            selectedIds={selectedResourceIds}
+                            onToggleSelect={toggleSelectResource}
                           />
                           {ungroupedFolders.map((f: any) => (
                             <ResourceFolder
@@ -621,6 +736,11 @@ const SpecialtyDetail = () => {
                               specialtyId={specialty.id}
                               onDeleteResource={(rid) => deleteResource.mutate(rid)}
                               existingSubheadings={allSubheadings}
+                              selectable={selectMode}
+                              selectedIds={selectedResourceIds}
+                              selectedFolderIds={selectedFolderIds}
+                              onToggleSelect={toggleSelectResource}
+                              onToggleFolderSelect={toggleSelectFolder}
                             />
                           ))}
                         </>
@@ -635,6 +755,9 @@ const SpecialtyDetail = () => {
                             canManage={!!canManage}
                             onDelete={(rid) => deleteResource.mutate(rid)}
                             existingSubheadings={allSubheadings}
+                            selectable={selectMode}
+                            selectedIds={selectedResourceIds}
+                            onToggleSelect={toggleSelectResource}
                           />
                           {group.folders.map((f: any) => (
                             <ResourceFolder
@@ -645,6 +768,11 @@ const SpecialtyDetail = () => {
                               specialtyId={specialty.id}
                               onDeleteResource={(rid) => deleteResource.mutate(rid)}
                               existingSubheadings={allSubheadings}
+                              selectable={selectMode}
+                              selectedIds={selectedResourceIds}
+                              selectedFolderIds={selectedFolderIds}
+                              onToggleSelect={toggleSelectResource}
+                              onToggleFolderSelect={toggleSelectFolder}
                             />
                           ))}
                         </div>
@@ -678,6 +806,15 @@ const SpecialtyDetail = () => {
           <DiscussionBoard specialtyId={id!} />
         </div>
       </div>
+
+      <BulkActionBar
+        selectedCount={selectedResourceIds.size + selectedFolderIds.size}
+        onDelete={handleBulkDelete}
+        onDownload={handleBulkDownload}
+        onClear={clearSelection}
+        deleting={bulkDeleting}
+        downloading={bulkDownloading}
+      />
 
       {/* Add Section Dialog */}
       <Dialog open={addSubOpen} onOpenChange={setAddSubOpen}>

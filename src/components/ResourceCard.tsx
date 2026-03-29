@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   FileText, Video, LinkIcon, BookOpen, CheckSquare, FolderOpen,
-  GripVertical, Trash2, Eye, Pencil, Bookmark,
+  GripVertical, Trash2, Eye, Pencil, Bookmark, Square,
 } from "lucide-react";
 import { ResourceViewer } from "@/components/ResourceViewer";
 import { EditResourceDialog } from "@/components/EditResourceDialog";
@@ -31,9 +31,12 @@ interface ResourceCardProps {
   canManage: boolean;
   onDelete?: (id: string) => void;
   existingSubheadings?: string[];
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function ResourceCard({ resource, canManage, onDelete, existingSubheadings = [] }: ResourceCardProps) {
+export function ResourceCard({ resource, canManage, onDelete, existingSubheadings = [], selectable, selected, onToggleSelect }: ResourceCardProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const { data: user } = useCurrentUser();
@@ -91,11 +94,19 @@ export function ResourceCard({ resource, canManage, onDelete, existingSubheading
     <>
       <div ref={setNodeRef} style={style}>
         <Card
-          className={`transition-shadow cursor-pointer ${isDragging ? "shadow-lg ring-2 ring-accent/30" : "hover:shadow-sm hover:border-accent/30"}`}
-          onClick={() => setViewerOpen(true)}
+          className={`transition-shadow cursor-pointer ${selected ? "ring-2 ring-accent/50 bg-accent/5" : ""} ${isDragging ? "shadow-lg ring-2 ring-accent/30" : "hover:shadow-sm hover:border-accent/30"}`}
+          onClick={() => selectable ? onToggleSelect?.(resource.id) : setViewerOpen(true)}
         >
           <CardContent className="flex items-center gap-3 p-3">
-            {canManage && (
+            {selectable && (
+              <button
+                className="shrink-0 text-muted-foreground hover:text-accent"
+                onClick={(e) => { e.stopPropagation(); onToggleSelect?.(resource.id); }}
+              >
+                {selected ? <CheckSquare className="h-4 w-4 text-accent" /> : <Square className="h-4 w-4" />}
+              </button>
+            )}
+            {canManage && !selectable && (
               <button
                 {...attributes}
                 {...listeners}

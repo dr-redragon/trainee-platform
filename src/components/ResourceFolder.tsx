@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  FolderOpen, FolderClosed, ChevronDown, MoreVertical, Pencil, Trash2, Upload, FileUp,
+  FolderOpen, FolderClosed, ChevronDown, MoreVertical, Pencil, Trash2, Upload, FileUp, Square, CheckSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ResourceCard } from "@/components/ResourceCard";
@@ -27,6 +27,11 @@ interface ResourceFolderProps {
   specialtyId: string;
   onDeleteResource: (id: string) => void;
   existingSubheadings: string[];
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  selectedFolderIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleFolderSelect?: (folderId: string, resourceIds: string[]) => void;
 }
 
 export function ResourceFolder({
@@ -36,6 +41,11 @@ export function ResourceFolder({
   specialtyId,
   onDeleteResource,
   existingSubheadings,
+  selectable,
+  selectedIds,
+  selectedFolderIds,
+  onToggleSelect,
+  onToggleFolderSelect,
 }: ResourceFolderProps) {
   const queryClient = useQueryClient();
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `folder:${folder.id}` });
@@ -156,6 +166,16 @@ export function ResourceFolder({
         >
           <CardContent className="p-0">
             <div className="flex items-center gap-2 px-3 py-2.5">
+              {selectable && (
+                <button
+                  className="shrink-0 text-muted-foreground hover:text-accent"
+                  onClick={(e) => { e.stopPropagation(); onToggleFolderSelect?.(folder.id, resources.map(r => r.id)); }}
+                >
+                  {selectedFolderIds?.has(folder.id)
+                    ? <CheckSquare className="h-4 w-4 text-accent" />
+                    : <Square className="h-4 w-4" />}
+                </button>
+              )}
               <CollapsibleTrigger asChild>
                 <button className="flex items-center gap-2 flex-1 min-w-0 group">
                   <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform shrink-0 ${open ? "rotate-0" : "-rotate-90"}`} />
@@ -242,6 +262,9 @@ export function ResourceFolder({
                       canManage={canManage}
                       onDelete={onDeleteResource}
                       existingSubheadings={existingSubheadings}
+                      selectable={selectable}
+                      selected={selectedIds?.has(r.id)}
+                      onToggleSelect={onToggleSelect}
                     />
                   ))
                 )}
