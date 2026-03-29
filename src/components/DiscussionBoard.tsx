@@ -56,7 +56,7 @@ export function DiscussionBoard({ specialtyId }: DiscussionBoardProps) {
   const { data: profiles } = useQuery({
     queryKey: ["profiles-map"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("user_id, first_name, last_name");
+      const { data, error } = await supabase.rpc("get_profile_display_names");
       if (error) throw error;
       return data;
     },
