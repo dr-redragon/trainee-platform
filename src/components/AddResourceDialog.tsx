@@ -189,7 +189,7 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
               dragOver ? "border-accent bg-accent/5" : file ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/40"
             }`}
           >
-            <input ref={fileRef} type="file" className="hidden" onChange={handleFileChange} />
+            <input ref={fileRef} type="file" multiple className="hidden" onChange={handleFileChange} />
             {file ? (
               <div className="flex items-center justify-center gap-2">
                 <FileUp className="h-5 w-5 text-accent" />
@@ -199,8 +199,8 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
             ) : (
               <>
                 <Upload className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Drag & drop a file here, or click to browse</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">PDF, DOCX, PPTX, MP4, etc.</p>
+                <p className="text-sm text-muted-foreground">Drag & drop file(s) here, or click to browse</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">Drop multiple files for bulk upload</p>
               </>
             )}
           </div>
