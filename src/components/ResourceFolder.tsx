@@ -118,8 +118,11 @@ export function ResourceFolder({
         .order("sort_order", { ascending: false })
         .limit(1);
       let nextOrder = (existing?.[0]?.sort_order ?? -1) + 1;
+      setUploadProgress({ current: 0, total: filesToUpload.length, fileName: "" });
 
-      for (const file of filesToUpload) {
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i];
+        setUploadProgress({ current: i + 1, total: filesToUpload.length, fileName: file.name });
         const ext = file.name.split(".").pop();
         const path = `${specialtyId}/${folder.subsection_id}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
