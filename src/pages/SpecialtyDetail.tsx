@@ -515,7 +515,14 @@ const SpecialtyDetail = () => {
             const hasContent = subResources.length > 0 || subFolders.length > 0 || grouped.length > 0;
 
             return (
-              <TabsContent key={sub.id} value={sub.name} className="mt-4 space-y-3">
+              <TabsContent
+                key={sub.id}
+                value={sub.name}
+                className={`mt-4 space-y-3 rounded-lg transition-colors ${nativeDropSub === sub.id ? "ring-2 ring-accent/40 bg-accent/5" : ""}`}
+                onDragOver={(e) => { e.preventDefault(); setNativeDropSub(sub.id); }}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setNativeDropSub(null); }}
+                onDrop={(e) => { if (e.dataTransfer.files.length > 0) handleNativeFileDrop(e, sub.id); }}
+              >
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-sm">{sub.name}</h3>
                   <div className="flex items-center gap-1">
