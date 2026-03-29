@@ -718,11 +718,14 @@ const SpecialtyDetail = () => {
                     <div className="space-y-4">
                       {(ungrouped.length > 0 || ungroupedFolders.length > 0 || canManage) && (
                         <>
-                          <DroppableUngrouped
+                         <DroppableUngrouped
                             resources={ungrouped}
                             canManage={!!canManage}
                             onDelete={(rid) => deleteResource.mutate(rid)}
                             existingSubheadings={allSubheadings}
+                            selectable={selectMode}
+                            selectedIds={selectedResourceIds}
+                            onToggleSelect={toggleSelectResource}
                           />
                           {ungroupedFolders.map((f: any) => (
                             <ResourceFolder
@@ -733,6 +736,11 @@ const SpecialtyDetail = () => {
                               specialtyId={specialty.id}
                               onDeleteResource={(rid) => deleteResource.mutate(rid)}
                               existingSubheadings={allSubheadings}
+                              selectable={selectMode}
+                              selectedIds={selectedResourceIds}
+                              selectedFolderIds={selectedFolderIds}
+                              onToggleSelect={toggleSelectResource}
+                              onToggleFolderSelect={toggleSelectFolder}
                             />
                           ))}
                         </>
