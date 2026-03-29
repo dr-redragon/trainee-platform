@@ -31,6 +31,9 @@ interface ResourceCardProps {
   canManage: boolean;
   onDelete?: (id: string) => void;
   existingSubheadings?: string[];
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 export function ResourceCard({ resource, canManage, onDelete, existingSubheadings = [] }: ResourceCardProps) {
