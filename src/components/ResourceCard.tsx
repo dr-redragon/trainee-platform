@@ -16,6 +16,13 @@ import { EditResourceDialog } from "@/components/EditResourceDialog";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
 const typeIcons: Record<string, typeof FileText> = {
   pdf: FileText,
   video: Video,
