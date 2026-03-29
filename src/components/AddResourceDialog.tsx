@@ -210,6 +210,10 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
             )}
           </div>
 
+          {uploading && uploadProgress.total > 0 && (
+            <UploadProgressBar current={uploadProgress.current} total={uploadProgress.total} currentFileName={uploadProgress.fileName} />
+          )}
+
           <div className="space-y-1.5">
             <Label>Title</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Resource title" />
