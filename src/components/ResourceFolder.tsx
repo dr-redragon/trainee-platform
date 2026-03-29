@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useDroppable } from "@dnd-kit/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -37,6 +38,7 @@ export function ResourceFolder({
   existingSubheadings,
 }: ResourceFolderProps) {
   const queryClient = useQueryClient();
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `folder:${folder.id}` });
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(folder.name);
@@ -138,9 +140,10 @@ export function ResourceFolder({
 
   return (
     <>
-      <Collapsible open={open} onOpenChange={setOpen}>
+      <Collapsible open={open || isOver} onOpenChange={setOpen}>
         <Card
-          className={`transition-colors ${dragOver ? "ring-2 ring-accent/40 bg-accent/5" : ""}`}
+          ref={setDropRef}
+          className={`transition-colors ${isOver ? "ring-2 ring-accent/40 bg-accent/5" : dragOver ? "ring-2 ring-accent/40 bg-accent/5" : ""}`}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}

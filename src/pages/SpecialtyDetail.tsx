@@ -58,6 +58,54 @@ const SpecialtyDetail = () => {
   // Track manually added (empty) subheadings per subsection so they show before any resource is assigned
   const [manualSubheadings, setManualSubheadings] = useState<Record<string, string[]>>({});
   const [moveTargetId, setMoveTargetId] = useState<string>("");
+  const [nativeDropSub, setNativeDropSub] = useState<string | null>(null);
+  const [nativeDropUploading, setNativeDropUploading] = useState(false);
+
+  const handleNativeFileDrop = async (e: React.DragEvent, subsectionId: string) => {
+    e.preventDefault();
+    setNativeDropSub(null);
+    const files = e.dataTransfer.files;
+    if (!files.length) return;
+    setNativeDropUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: existing } = await supabase
+        .from("resources")
+        .select("sort_order")
+        .eq("subsection_id", subsectionId)
+        .order("sort_order", { ascending: false })
+        .limit(1);
+      let nextOrder = ((existing?.[0]?.sort_order ?? -1) + 1);
+
+      for (const file of Array.from(files)) {
+        const ext = file.name.split(".").pop();
+        const path = `${id}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
+        if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
+        const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
+
+        let rType = "document";
+        if (file.type === "application/pdf") rType = "pdf";
+        else if (file.type.startsWith("video/")) rType = "video";
+        else if (file.name.endsWith(".pptx") || file.name.endsWith(".ppt")) rType = "presentation";
+
+        await supabase.from("resources").insert({
+          title: file.name.replace(/\.[^.]+$/, ""),
+          resource_type: rType as any,
+          subsection_id: subsectionId,
+          file_url: urlData.publicUrl,
+          added_by: user?.id ?? null,
+          sort_order: nextOrder++,
+        } as any);
+      }
+      toast.success(`${files.length} file(s) uploaded`);
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setNativeDropUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (location.hash === "#discussion" && discussionRef.current) {
@@ -262,10 +310,12 @@ const SpecialtyDetail = () => {
   };
 
   const updateResourceSubheading = useMutation({
-    mutationFn: async ({ resourceId, subheading }: { resourceId: string; subheading: string | null }) => {
+    mutationFn: async ({ resourceId, subheading, folderId }: { resourceId: string; subheading: string | null; folderId?: string | null }) => {
+      const updateData: any = { subheading };
+      if (folderId !== undefined) updateData.folder_id = folderId;
       const { error } = await supabase
         .from("resources")
-        .update({ subheading } as any)
+        .update(updateData)
         .eq("id", resourceId);
       if (error) throw error;
     },
@@ -280,44 +330,63 @@ const SpecialtyDetail = () => {
     const activeId = active.id as string;
     const overId = over.id as string;
 
+    const activeResource = subResources.find((r) => r.id === activeId);
+    if (!activeResource) return;
+
+    // Handle drop onto a folder
+    if (overId.startsWith("folder:")) {
+      const targetFolderId = overId.replace("folder:", "");
+      const targetFolder = (resourceFolders ?? []).find((f: any) => f.id === targetFolderId);
+      if (!targetFolder) return;
+      // Optimistic update
+      queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
+        if (!old) return old;
+        return old.map((r) =>
+          r.id === activeId ? { ...r, folder_id: targetFolderId, subheading: (targetFolder as any).subheading || null } : r
+        );
+      });
+      updateResourceSubheading.mutate({
+        resourceId: activeId,
+        subheading: (targetFolder as any).subheading || null,
+        folderId: targetFolderId,
+      });
+      return;
+    }
+
     // Determine target group from the over element
     let targetSubheading: string | null = null;
     let isGroupDrop = false;
 
     if (overId.startsWith("group:")) {
-      // Dropped directly onto a group droppable
       isGroupDrop = true;
       const groupKey = overId.replace("group:", "");
       targetSubheading = groupKey === "__ungrouped__" ? null : groupKey;
     } else {
-      // Dropped onto another resource — find that resource's subheading
       const overResource = subResources.find((r) => r.id === overId);
       if (overResource) {
         targetSubheading = (overResource as any).subheading || null;
       }
     }
 
-    const activeResource = subResources.find((r) => r.id === activeId);
-    if (!activeResource) return;
     const activeSubheading: string | null = (activeResource as any).subheading || null;
+    const activeFolderId: string | null = (activeResource as any).folder_id || null;
 
-    // If moving between groups, update the subheading
-    if (activeSubheading !== targetSubheading) {
-      // Optimistic update
+    // If moving between groups or out of a folder, update
+    if (activeSubheading !== targetSubheading || activeFolderId) {
       queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
         if (!old) return old;
         return old.map((r) =>
-          r.id === activeId ? { ...r, subheading: targetSubheading } : r
+          r.id === activeId ? { ...r, subheading: targetSubheading, folder_id: null } : r
         );
       });
-      updateResourceSubheading.mutate({ resourceId: activeId, subheading: targetSubheading });
+      updateResourceSubheading.mutate({ resourceId: activeId, subheading: targetSubheading, folderId: null });
       return;
     }
 
     // Same group reorder
     if (activeId === overId || isGroupDrop) return;
     const groupResources = subResources
-      .filter((r) => ((r as any).subheading || null) === targetSubheading)
+      .filter((r) => ((r as any).subheading || null) === targetSubheading && !(r as any).folder_id)
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
     const oldIndex = groupResources.findIndex((r) => r.id === activeId);
     const newIndex = groupResources.findIndex((r) => r.id === overId);
@@ -446,7 +515,14 @@ const SpecialtyDetail = () => {
             const hasContent = subResources.length > 0 || subFolders.length > 0 || grouped.length > 0;
 
             return (
-              <TabsContent key={sub.id} value={sub.name} className="mt-4 space-y-3">
+              <TabsContent
+                key={sub.id}
+                value={sub.name}
+                className={`mt-4 space-y-3 rounded-lg transition-colors ${nativeDropSub === sub.id ? "ring-2 ring-accent/40 bg-accent/5" : ""}`}
+                onDragOver={(e) => { e.preventDefault(); setNativeDropSub(sub.id); }}
+                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setNativeDropSub(null); }}
+                onDrop={(e) => { if (e.dataTransfer.files.length > 0) handleNativeFileDrop(e, sub.id); }}
+              >
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-sm">{sub.name}</h3>
                   <div className="flex items-center gap-1">
