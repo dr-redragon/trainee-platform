@@ -27,6 +27,11 @@ interface ResourceFolderProps {
   specialtyId: string;
   onDeleteResource: (id: string) => void;
   existingSubheadings: string[];
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  selectedFolderIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleFolderSelect?: (folderId: string, resourceIds: string[]) => void;
 }
 
 export function ResourceFolder({
@@ -36,6 +41,11 @@ export function ResourceFolder({
   specialtyId,
   onDeleteResource,
   existingSubheadings,
+  selectable,
+  selectedIds,
+  selectedFolderIds,
+  onToggleSelect,
+  onToggleFolderSelect,
 }: ResourceFolderProps) {
   const queryClient = useQueryClient();
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `folder:${folder.id}` });
