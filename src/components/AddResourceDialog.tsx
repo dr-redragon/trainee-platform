@@ -34,11 +34,16 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const f = e.dataTransfer.files[0];
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 1) {
+      // Multi-file: trigger bulk upload
+      handleBulkUpload(files);
+      return;
+    }
+    const f = files[0];
     if (f) {
       setFile(f);
       if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
-      // auto-detect type
       if (f.type === "application/pdf") setResourceType("pdf");
       else if (f.type.startsWith("video/")) setResourceType("video");
       else if (f.name.endsWith(".pptx") || f.name.endsWith(".ppt")) setResourceType("presentation");
@@ -46,12 +51,62 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 1) {
+      handleBulkUpload(files);
+      return;
+    }
+    const f = files[0];
     if (f) {
       setFile(f);
       if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
       if (f.type === "application/pdf") setResourceType("pdf");
       else if (f.type.startsWith("video/")) setResourceType("video");
+    }
+  };
+
+  const handleBulkUpload = async (files: File[]) => {
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: existing } = await supabase
+        .from("resources")
+        .select("sort_order")
+        .eq("subsection_id", subsectionId)
+        .order("sort_order", { ascending: false })
+        .limit(1);
+      let nextOrder = ((existing?.[0]?.sort_order ?? -1) + 1);
+      const finalSubheading = subheading === "__new__" ? customSubheading.trim() : subheading;
+
+      for (const file of files) {
+        const ext = file.name.split(".").pop();
+        const path = `${specialtyId}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
+        if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
+        const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
+
+        let rType = "document";
+        if (file.type === "application/pdf") rType = "pdf";
+        else if (file.type.startsWith("video/")) rType = "video";
+        else if (file.name.endsWith(".pptx") || file.name.endsWith(".ppt")) rType = "presentation";
+
+        await supabase.from("resources").insert({
+          title: file.name.replace(/\.[^.]+$/, ""),
+          resource_type: rType as any,
+          subsection_id: subsectionId,
+          file_url: urlData.publicUrl,
+          added_by: user?.id ?? null,
+          sort_order: nextOrder++,
+          subheading: finalSubheading || null,
+        } as any);
+      }
+      toast.success(`${files.length} files uploaded`);
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      resetForm();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploading(false);
     }
   };
 
