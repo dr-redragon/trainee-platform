@@ -282,44 +282,63 @@ const SpecialtyDetail = () => {
     const activeId = active.id as string;
     const overId = over.id as string;
 
+    const activeResource = subResources.find((r) => r.id === activeId);
+    if (!activeResource) return;
+
+    // Handle drop onto a folder
+    if (overId.startsWith("folder:")) {
+      const targetFolderId = overId.replace("folder:", "");
+      const targetFolder = (resourceFolders ?? []).find((f: any) => f.id === targetFolderId);
+      if (!targetFolder) return;
+      // Optimistic update
+      queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
+        if (!old) return old;
+        return old.map((r) =>
+          r.id === activeId ? { ...r, folder_id: targetFolderId, subheading: (targetFolder as any).subheading || null } : r
+        );
+      });
+      updateResourceSubheading.mutate({
+        resourceId: activeId,
+        subheading: (targetFolder as any).subheading || null,
+        folderId: targetFolderId,
+      });
+      return;
+    }
+
     // Determine target group from the over element
     let targetSubheading: string | null = null;
     let isGroupDrop = false;
 
     if (overId.startsWith("group:")) {
-      // Dropped directly onto a group droppable
       isGroupDrop = true;
       const groupKey = overId.replace("group:", "");
       targetSubheading = groupKey === "__ungrouped__" ? null : groupKey;
     } else {
-      // Dropped onto another resource — find that resource's subheading
       const overResource = subResources.find((r) => r.id === overId);
       if (overResource) {
         targetSubheading = (overResource as any).subheading || null;
       }
     }
 
-    const activeResource = subResources.find((r) => r.id === activeId);
-    if (!activeResource) return;
     const activeSubheading: string | null = (activeResource as any).subheading || null;
+    const activeFolderId: string | null = (activeResource as any).folder_id || null;
 
-    // If moving between groups, update the subheading
-    if (activeSubheading !== targetSubheading) {
-      // Optimistic update
+    // If moving between groups or out of a folder, update
+    if (activeSubheading !== targetSubheading || activeFolderId) {
       queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
         if (!old) return old;
         return old.map((r) =>
-          r.id === activeId ? { ...r, subheading: targetSubheading } : r
+          r.id === activeId ? { ...r, subheading: targetSubheading, folder_id: null } : r
         );
       });
-      updateResourceSubheading.mutate({ resourceId: activeId, subheading: targetSubheading });
+      updateResourceSubheading.mutate({ resourceId: activeId, subheading: targetSubheading, folderId: null });
       return;
     }
 
     // Same group reorder
     if (activeId === overId || isGroupDrop) return;
     const groupResources = subResources
-      .filter((r) => ((r as any).subheading || null) === targetSubheading)
+      .filter((r) => ((r as any).subheading || null) === targetSubheading && !(r as any).folder_id)
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
     const oldIndex = groupResources.findIndex((r) => r.id === activeId);
     const newIndex = groupResources.findIndex((r) => r.id === overId);
