@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Upload, FileUp } from "lucide-react";
 import { toast } from "sonner";
+import { UploadProgressBar } from "@/components/UploadProgressBar";
 import { Constants } from "@/integrations/supabase/types";
 
 interface AddResourceDialogProps {
@@ -28,6 +29,7 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
   const [customSubheading, setCustomSubheading] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: "" });
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -77,8 +79,11 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
         .limit(1);
       let nextOrder = ((existing?.[0]?.sort_order ?? -1) + 1);
       const finalSubheading = subheading === "__new__" ? customSubheading.trim() : subheading;
+      setUploadProgress({ current: 0, total: files.length, fileName: "" });
 
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress({ current: i + 1, total: files.length, fileName: file.name });
         const ext = file.name.split(".").pop();
         const path = `${specialtyId}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
