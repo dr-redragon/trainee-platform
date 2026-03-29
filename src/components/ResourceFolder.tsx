@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ResourceCard } from "@/components/ResourceCard";
+import { UploadProgressBar } from "@/components/UploadProgressBar";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface ResourceFolderProps {
@@ -54,6 +55,7 @@ export function ResourceFolder({
   const [newName, setNewName] = useState(folder.name);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: "" });
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
