@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Download, FileText, AlertTriangle } from "lucide-react";
+import { ExternalLink, Download, FileText, AlertTriangle, Loader2 } from "lucide-react";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import type { Tables } from "@/integrations/supabase/types";
+import { getSignedResourceUrl, extractStoragePath } from "@/lib/storageUtils";
 
 interface ResourceViewerProps {
   resource: Tables<"resources"> | null;
@@ -10,23 +12,18 @@ interface ResourceViewerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function getViewerUrl(resource: Tables<"resources">): { url: string; type: "pdf" | "office" | "direct" } | null {
-  const url = resource.file_url || resource.external_url || resource.embed_url;
+function getViewerUrl(url: string): { url: string; type: "pdf" | "office" | "direct" } | null {
   if (!url) return null;
-
-  const lowerUrl = url.toLowerCase().split("?")[0]; // strip query params for extension check
+  const lowerUrl = url.toLowerCase().split("?")[0];
 
   if (lowerUrl.endsWith(".pdf")) {
     return { url, type: "pdf" };
   }
 
   if (
-    lowerUrl.endsWith(".docx") ||
-    lowerUrl.endsWith(".doc") ||
-    lowerUrl.endsWith(".pptx") ||
-    lowerUrl.endsWith(".ppt") ||
-    lowerUrl.endsWith(".xlsx") ||
-    lowerUrl.endsWith(".xls")
+    lowerUrl.endsWith(".docx") || lowerUrl.endsWith(".doc") ||
+    lowerUrl.endsWith(".pptx") || lowerUrl.endsWith(".ppt") ||
+    lowerUrl.endsWith(".xlsx") || lowerUrl.endsWith(".xls")
   ) {
     return {
       url: `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`,
@@ -52,14 +49,34 @@ function isYouTube(resource: Tables<"resources">): string | null {
 }
 
 export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerProps) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !resource?.file_url) {
+      setSignedUrl(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    getSignedResourceUrl(resource.file_url).then((url) => {
+      if (!cancelled) {
+        setSignedUrl(url);
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [open, resource?.file_url]);
+
   if (!resource) return null;
 
-  const rawUrl = resource.file_url || resource.external_url || resource.embed_url;
-  const viewerUrl = getViewerUrl(resource);
+  const isStorageFile = resource.file_url && extractStoragePath(resource.file_url) !== null;
+  const resolvedFileUrl = isStorageFile ? signedUrl : resource.file_url;
+  const rawUrl = resolvedFileUrl || resource.external_url || resource.embed_url;
+  const viewerUrl = rawUrl ? getViewerUrl(rawUrl) : null;
   const ytId = isYouTube(resource);
   const video = isVideo(resource);
-
-
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -93,9 +110,9 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
               <ExternalLink className="h-3 w-3" /> Open
             </a>
           )}
-          {resource.file_url && (
+          {resolvedFileUrl && (
             <a
-              href={resource.file_url}
+              href={resolvedFileUrl}
               download={resource.title || "download"}
               target="_blank"
               rel="noopener noreferrer"
@@ -110,7 +127,11 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
 
         {/* Content area */}
         <div className="flex-1 overflow-hidden bg-muted/20">
-          {ytId ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : ytId ? (
             <iframe
               src={`https://www.youtube.com/embed/${ytId}?autoplay=0`}
               className="w-full h-full border-0"

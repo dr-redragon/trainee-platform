@@ -127,13 +127,12 @@ export function ResourceFolder({
         const path = `${specialtyId}/${folder.subsection_id}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
-        const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
 
         const { error } = await supabase.from("resources").insert({
           title: file.name.replace(/\.[^.]+$/, ""),
           resource_type: detectResourceType(file) as any,
           subsection_id: folder.subsection_id,
-          file_url: urlData.publicUrl,
+          file_url: path,
           added_by: user?.id ?? null,
           sort_order: nextOrder++,
           subheading: folder.subheading,

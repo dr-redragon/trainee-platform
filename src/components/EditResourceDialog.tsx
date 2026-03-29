@@ -102,8 +102,7 @@ export function EditResourceDialog({ resource, open, onOpenChange, existingSubhe
         const path = `${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) throw uploadErr;
-        const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
-        fileUrl = urlData.publicUrl;
+        fileUrl = path;
       } else if (removeFile) {
         fileUrl = null;
       }

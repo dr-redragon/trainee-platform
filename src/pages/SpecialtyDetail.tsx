@@ -140,9 +140,13 @@ const SpecialtyDetail = () => {
   const handleBulkDownload = async () => {
     setBulkDownloading(true);
     try {
+      const { getSignedResourceUrl } = await import("@/lib/storageUtils");
       const toDownload = (resources ?? []).filter((r) => selectedResourceIds.has(r.id));
       for (const r of toDownload) {
-        const url = r.file_url || r.external_url;
+        let url = r.external_url;
+        if (r.file_url) {
+          url = await getSignedResourceUrl(r.file_url);
+        }
         if (url) {
           const a = document.createElement("a");
           a.href = url;
@@ -151,7 +155,6 @@ const SpecialtyDetail = () => {
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-          // Small delay between downloads
           await new Promise((resolve) => setTimeout(resolve, 300));
         }
       }
@@ -203,13 +206,12 @@ const SpecialtyDetail = () => {
         const path = `${id}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
-        const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
 
         await supabase.from("resources").insert({
           title: file.name.replace(/\.[^.]+$/, ""),
           resource_type: detectResourceType(file) as any,
           subsection_id: subsectionId,
-          file_url: urlData.publicUrl,
+          file_url: path,
           added_by: user?.id ?? null,
           sort_order: nextOrder++,
           folder_id: folderName ? folderIdMap[folderName] ?? null : null,
