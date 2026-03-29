@@ -807,6 +807,15 @@ const SpecialtyDetail = () => {
         </div>
       </div>
 
+      <BulkActionBar
+        selectedCount={selectedResourceIds.size + selectedFolderIds.size}
+        onDelete={handleBulkDelete}
+        onDownload={handleBulkDownload}
+        onClear={clearSelection}
+        deleting={bulkDeleting}
+        downloading={bulkDownloading}
+      />
+
       {/* Add Section Dialog */}
       <Dialog open={addSubOpen} onOpenChange={setAddSubOpen}>
         <DialogContent>
