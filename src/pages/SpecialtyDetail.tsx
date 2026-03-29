@@ -755,6 +755,9 @@ const SpecialtyDetail = () => {
                             canManage={!!canManage}
                             onDelete={(rid) => deleteResource.mutate(rid)}
                             existingSubheadings={allSubheadings}
+                            selectable={selectMode}
+                            selectedIds={selectedResourceIds}
+                            onToggleSelect={toggleSelectResource}
                           />
                           {group.folders.map((f: any) => (
                             <ResourceFolder
@@ -765,6 +768,11 @@ const SpecialtyDetail = () => {
                               specialtyId={specialty.id}
                               onDeleteResource={(rid) => deleteResource.mutate(rid)}
                               existingSubheadings={allSubheadings}
+                              selectable={selectMode}
+                              selectedIds={selectedResourceIds}
+                              selectedFolderIds={selectedFolderIds}
+                              onToggleSelect={toggleSelectResource}
+                              onToggleFolderSelect={toggleSelectFolder}
                             />
                           ))}
                         </div>
