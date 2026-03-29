@@ -140,9 +140,10 @@ export function ResourceFolder({
 
   return (
     <>
-      <Collapsible open={open} onOpenChange={setOpen}>
+      <Collapsible open={open || isOver} onOpenChange={setOpen}>
         <Card
-          className={`transition-colors ${dragOver ? "ring-2 ring-accent/40 bg-accent/5" : ""}`}
+          ref={setDropRef}
+          className={`transition-colors ${isOver ? "ring-2 ring-accent/40 bg-accent/5" : dragOver ? "ring-2 ring-accent/40 bg-accent/5" : ""}`}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
