@@ -61,6 +61,105 @@ const SpecialtyDetail = () => {
   const [moveTargetId, setMoveTargetId] = useState<string>("");
   const [nativeDropSub, setNativeDropSub] = useState<string | null>(null);
   const [nativeDropUploading, setNativeDropUploading] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(new Set());
+  const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+
+  const toggleSelectResource = (id: string) => {
+    setSelectedResourceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectFolder = (folderId: string, resourceIds: string[]) => {
+    setSelectedFolderIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+        // Also deselect contained resources
+        setSelectedResourceIds((rPrev) => {
+          const rNext = new Set(rPrev);
+          resourceIds.forEach((id) => rNext.delete(id));
+          return rNext;
+        });
+      } else {
+        next.add(folderId);
+        // Also select contained resources
+        setSelectedResourceIds((rPrev) => {
+          const rNext = new Set(rPrev);
+          resourceIds.forEach((id) => rNext.add(id));
+          return rNext;
+        });
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectMode(false);
+    setSelectedResourceIds(new Set());
+    setSelectedFolderIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      // Delete selected folders and their contents
+      for (const folderId of selectedFolderIds) {
+        const folderResources = (resources ?? []).filter((r) => (r as any).folder_id === folderId);
+        for (const r of folderResources) {
+          await supabase.from("resources").delete().eq("id", r.id);
+        }
+        await supabase.from("resource_folders").delete().eq("id", folderId);
+      }
+      // Delete individually selected resources (not already deleted via folder)
+      for (const rid of selectedResourceIds) {
+        const resource = (resources ?? []).find((r) => r.id === rid);
+        if (resource && !selectedFolderIds.has((resource as any).folder_id ?? "")) {
+          await supabase.from("resources").delete().eq("id", rid);
+        }
+      }
+      toast.success("Selected items deleted");
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+      queryClient.invalidateQueries({ queryKey: ["resource-folders"] });
+      clearSelection();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const handleBulkDownload = async () => {
+    setBulkDownloading(true);
+    try {
+      const toDownload = (resources ?? []).filter((r) => selectedResourceIds.has(r.id));
+      for (const r of toDownload) {
+        const url = r.file_url || r.external_url;
+        if (url) {
+          const a = document.createElement("a");
+          a.href = url;
+          a.target = "_blank";
+          a.download = r.title;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          // Small delay between downloads
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+      }
+      toast.success(`${toDownload.length} file(s) downloading`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBulkDownloading(false);
+    }
+  };
 
   const handleNativeFileDrop = async (e: React.DragEvent, subsectionId: string) => {
     e.preventDefault();
