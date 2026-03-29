@@ -193,8 +193,11 @@ const SpecialtyDetail = () => {
         if (folderErr) { toast.error(`Failed to create folder: ${folderName}`); continue; }
         folderIdMap[folderName] = (folderData as any).id;
       }
+      setNativeUploadProgress({ current: 0, total: droppedFiles.length, fileName: "" });
 
-      for (const { folderName, file } of droppedFiles) {
+      for (let i = 0; i < droppedFiles.length; i++) {
+        const { folderName, file } = droppedFiles[i];
+        setNativeUploadProgress({ current: i + 1, total: droppedFiles.length, fileName: file.name });
         const ext = file.name.split(".").pop();
         const path = `${id}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
