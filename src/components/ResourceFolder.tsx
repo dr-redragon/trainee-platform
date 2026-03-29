@@ -83,12 +83,22 @@ export function ResourceFolder({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleBulkUpload = async (files: FileList) => {
-    if (!files.length) return;
+  const handleBulkUpload = async (dataTransferOrFiles: DataTransfer | FileList) => {
     setUploading(true);
     try {
+      const { getDroppedFiles, detectResourceType } = await import("@/lib/fileDropUtils");
+      let filesToUpload: File[];
+
+      if (dataTransferOrFiles instanceof DataTransfer) {
+        const dropped = await getDroppedFiles(dataTransferOrFiles);
+        filesToUpload = dropped.map((d) => d.file);
+      } else {
+        filesToUpload = Array.from(dataTransferOrFiles);
+      }
+
+      if (!filesToUpload.length) return;
+
       const { data: { user } } = await supabase.auth.getUser();
-      // Get max sort_order in this subsection
       const { data: existing } = await supabase
         .from("resources")
         .select("sort_order")
@@ -97,21 +107,16 @@ export function ResourceFolder({
         .limit(1);
       let nextOrder = (existing?.[0]?.sort_order ?? -1) + 1;
 
-      for (const file of Array.from(files)) {
+      for (const file of filesToUpload) {
         const ext = file.name.split(".").pop();
         const path = `${specialtyId}/${folder.subsection_id}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
         const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
 
-        let resourceType = "document";
-        if (file.type === "application/pdf") resourceType = "pdf";
-        else if (file.type.startsWith("video/")) resourceType = "video";
-        else if (file.name.endsWith(".pptx") || file.name.endsWith(".ppt")) resourceType = "presentation";
-
         const { error } = await supabase.from("resources").insert({
           title: file.name.replace(/\.[^.]+$/, ""),
-          resource_type: resourceType as any,
+          resource_type: detectResourceType(file) as any,
           subsection_id: folder.subsection_id,
           file_url: urlData.publicUrl,
           added_by: user?.id ?? null,
@@ -121,7 +126,7 @@ export function ResourceFolder({
         } as any);
         if (error) toast.error(`Failed: ${file.name}`);
       }
-      toast.success(`${files.length} file(s) uploaded`);
+      toast.success(`${filesToUpload.length} file(s) uploaded`);
       queryClient.invalidateQueries({ queryKey: ["resources"] });
     } catch (e: any) {
       toast.error(e.message);
@@ -134,8 +139,8 @@ export function ResourceFolder({
     e.preventDefault();
     e.stopPropagation();
     setDragOver(false);
-    if (e.dataTransfer.files.length) {
-      handleBulkUpload(e.dataTransfer.files);
+    if (e.dataTransfer.items.length > 0 || e.dataTransfer.files.length > 0) {
+      handleBulkUpload(e.dataTransfer);
     }
   };
 
