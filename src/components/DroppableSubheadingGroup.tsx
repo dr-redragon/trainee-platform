@@ -11,6 +11,9 @@ interface DroppableSubheadingGroupProps {
   canManage: boolean;
   onDelete: (id: string) => void;
   existingSubheadings: string[];
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
 export function DroppableSubheadingGroup({
@@ -20,6 +23,9 @@ export function DroppableSubheadingGroup({
   canManage,
   onDelete,
   existingSubheadings,
+  selectable,
+  selectedIds,
+  onToggleSelect,
 }: DroppableSubheadingGroupProps) {
   const { setNodeRef, isOver } = useDroppable({ id: `group:${groupId}` });
 
@@ -47,6 +53,9 @@ export function DroppableSubheadingGroup({
                   canManage={canManage}
                   onDelete={onDelete}
                   existingSubheadings={existingSubheadings}
+                  selectable={selectable}
+                  selected={selectedIds?.has(r.id)}
+                  onToggleSelect={onToggleSelect}
                 />
               ))}
             </div>
