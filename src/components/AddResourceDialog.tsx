@@ -88,7 +88,6 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
         const path = `${specialtyId}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
-        const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
 
         let rType = "document";
         if (file.type === "application/pdf") rType = "pdf";
@@ -99,7 +98,7 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
           title: file.name.replace(/\.[^.]+$/, ""),
           resource_type: rType as any,
           subsection_id: subsectionId,
-          file_url: urlData.publicUrl,
+          file_url: path,
           added_by: user?.id ?? null,
           sort_order: nextOrder++,
           subheading: finalSubheading || null,
@@ -126,8 +125,7 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
         const path = `${specialtyId}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) throw uploadErr;
-        const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
-        fileUrl = urlData.publicUrl;
+        fileUrl = path;
       }
 
       const { data: { user } } = await supabase.auth.getUser();
