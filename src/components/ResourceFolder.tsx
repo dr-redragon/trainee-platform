@@ -67,15 +67,15 @@ export function ResourceFolder({
 
   const deleteFolder = useMutation({
     mutationFn: async () => {
-      // Unassign resources from folder first
+      // Delete all resources inside the folder
       for (const r of resources) {
-        await supabase.from("resources").update({ folder_id: null } as any).eq("id", r.id);
+        await supabase.from("resources").delete().eq("id", r.id);
       }
       const { error } = await supabase.from("resource_folders").delete().eq("id", folder.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Folder deleted — resources moved out");
+      toast.success("Folder and contents deleted");
       queryClient.invalidateQueries({ queryKey: ["resource-folders"] });
       queryClient.invalidateQueries({ queryKey: ["resources"] });
       setDeleteOpen(false);
@@ -258,7 +258,7 @@ export function ResourceFolder({
             <DialogTitle>Delete "{folder.name}"</DialogTitle>
             <DialogDescription>
               {resources.length > 0
-                ? `This folder has ${resources.length} resource(s). They will be moved out of the folder but not deleted.`
+                ? `This folder has ${resources.length} resource(s). Deleting it will permanently remove the folder and all its contents.`
                 : "This empty folder will be removed."}
             </DialogDescription>
           </DialogHeader>
