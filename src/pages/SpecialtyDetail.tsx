@@ -262,10 +262,12 @@ const SpecialtyDetail = () => {
   };
 
   const updateResourceSubheading = useMutation({
-    mutationFn: async ({ resourceId, subheading }: { resourceId: string; subheading: string | null }) => {
+    mutationFn: async ({ resourceId, subheading, folderId }: { resourceId: string; subheading: string | null; folderId?: string | null }) => {
+      const updateData: any = { subheading };
+      if (folderId !== undefined) updateData.folder_id = folderId;
       const { error } = await supabase
         .from("resources")
-        .update({ subheading } as any)
+        .update(updateData)
         .eq("id", resourceId);
       if (error) throw error;
     },
