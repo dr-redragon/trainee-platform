@@ -255,6 +255,9 @@ export function ResourceFolder({
 
             <CollapsibleContent>
               <div className="px-3 pb-3 space-y-2 border-t pt-2">
+                {uploading && uploadProgress.total > 0 && (
+                  <UploadProgressBar current={uploadProgress.current} total={uploadProgress.total} currentFileName={uploadProgress.fileName} />
+                )}
                 {resources.length === 0 ? (
                   <div className="flex items-center justify-center py-4 text-xs text-muted-foreground border border-dashed rounded-md">
                     Drop files here or click Upload
