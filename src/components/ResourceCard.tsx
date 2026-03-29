@@ -121,9 +121,14 @@ export function ResourceCard({ resource, canManage, onDelete, existingSubheading
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-medium truncate">{resource.title}</h4>
-              {resource.description && (
-                <p className="text-xs text-muted-foreground line-clamp-1">{resource.description}</p>
-              )}
+              <div className="flex items-center gap-2">
+                {resource.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-1">{resource.description}</p>
+                )}
+                {(resource as any).file_size && (
+                  <span className="text-[10px] text-muted-foreground/70 shrink-0">{formatFileSize((resource as any).file_size)}</span>
+                )}
+              </div>
             </div>
             <Badge variant="secondary" className="text-[10px] shrink-0">{resource.resource_type.toUpperCase()}</Badge>
             <Button
