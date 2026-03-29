@@ -705,6 +705,10 @@ const SpecialtyDetail = () => {
                   </div>
                 </div>
 
+                {nativeDropUploading && nativeUploadProgress.total > 0 && (
+                  <UploadProgressBar current={nativeUploadProgress.current} total={nativeUploadProgress.total} currentFileName={nativeUploadProgress.fileName} />
+                )}
+
                 {!hasContent ? (
                   <Card className="border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
