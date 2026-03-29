@@ -56,32 +56,58 @@ const RequestAccess = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const trimmedFirst = firstName.trim();
+    const trimmedLast = lastName.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedReason = reason.trim();
+    const trimmedGrade = trainingGrade.trim();
+
+    if (trimmedFirst.length < 1 || trimmedFirst.length > 100) {
+      toast.error("First name must be between 1 and 100 characters."); return;
+    }
+    if (trimmedLast.length < 1 || trimmedLast.length > 100) {
+      toast.error("Last name must be between 1 and 100 characters."); return;
+    }
+    if (!/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(trimmedEmail)) {
+      toast.error("Please enter a valid email address."); return;
+    }
+    if (trimmedReason.length > 2000) {
+      toast.error("Reason must be under 2000 characters."); return;
+    }
+    if (trimmedGrade.length > 50) {
+      toast.error("Training grade must be under 50 characters."); return;
+    }
+
     setSubmitting(true);
 
     const { error } = await supabase.from("access_requests").insert({
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      email: email.trim(),
+      first_name: trimmedFirst,
+      last_name: trimmedLast,
+      email: trimmedEmail,
       deanery_id: deaneryId || null,
       specialty_id: specialtyId === "none" ? null : specialtyId,
-      training_grade: trainingGrade.trim() || null,
-      reason: reason.trim() || null,
+      training_grade: trimmedGrade || null,
+      reason: trimmedReason || null,
     });
 
     setSubmitting(false);
     if (error) {
-      toast.error("Failed to submit request. Please try again.");
+      if (error.message?.includes("already submitted")) {
+        toast.error("You've already submitted a request recently. Please wait before trying again.");
+      } else {
+        toast.error("Failed to submit request. Please try again.");
+      }
     } else {
       setSubmitted(true);
-      // Send confirmation + admin/facilitator alert emails (fire-and-forget)
       const selectedSpecialty = specialties?.find((s) => s.id === specialtyId);
       supabase.functions.invoke("access-request-email", {
         body: {
           type: "submission_confirmation",
-          applicant_email: email.trim(),
-          applicant_name: `${firstName.trim()} ${lastName.trim()}`,
+          applicant_email: trimmedEmail,
+          applicant_name: `${trimmedFirst} ${trimmedLast}`,
           specialty_name: selectedSpecialty?.short_name || "General",
-          training_grade: trainingGrade.trim() || undefined,
+          training_grade: trimmedGrade || undefined,
         },
       }).catch((e) => console.error("Email notification error:", e));
     }
