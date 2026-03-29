@@ -568,6 +568,7 @@ export type Database = {
           description: string | null
           embed_url: string | null
           external_url: string | null
+          file_size: number | null
           file_url: string | null
           folder_id: string | null
           id: string
@@ -584,6 +585,7 @@ export type Database = {
           description?: string | null
           embed_url?: string | null
           external_url?: string | null
+          file_size?: number | null
           file_url?: string | null
           folder_id?: string | null
           id?: string
@@ -600,6 +602,7 @@ export type Database = {
           description?: string | null
           embed_url?: string | null
           external_url?: string | null
+          file_size?: number | null
           file_url?: string | null
           folder_id?: string | null
           id?: string
