@@ -71,6 +71,9 @@ interface DroppableUngroupedProps {
   canManage: boolean;
   onDelete: (id: string) => void;
   existingSubheadings: string[];
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
 export function DroppableUngrouped({
@@ -78,6 +81,9 @@ export function DroppableUngrouped({
   canManage,
   onDelete,
   existingSubheadings,
+  selectable,
+  selectedIds,
+  onToggleSelect,
 }: DroppableUngroupedProps) {
   const { setNodeRef, isOver } = useDroppable({ id: "group:__ungrouped__" });
 
@@ -95,6 +101,9 @@ export function DroppableUngrouped({
               canManage={canManage}
               onDelete={onDelete}
               existingSubheadings={existingSubheadings}
+              selectable={selectable}
+              selected={selectedIds?.has(r.id)}
+              onToggleSelect={onToggleSelect}
             />
           ))}
         </div>
