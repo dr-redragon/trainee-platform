@@ -878,24 +878,7 @@ export type Database = {
       }
     }
     Views: {
-      profile_display_names: {
-        Row: {
-          first_name: string | null
-          last_name: string | null
-          user_id: string | null
-        }
-        Insert: {
-          first_name?: string | null
-          last_name?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          first_name?: string | null
-          last_name?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       can_access_specialty: {
@@ -905,6 +888,14 @@ export type Database = {
       can_manage_resource: {
         Args: { _subsection_id: string; _user_id: string }
         Returns: boolean
+      }
+      get_profile_display_names: {
+        Args: never
+        Returns: {
+          first_name: string
+          last_name: string
+          user_id: string
+        }[]
       }
       has_role: {
         Args: {
