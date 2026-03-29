@@ -125,6 +125,21 @@ const SpecialtyDetail = () => {
     enabled: subsectionIds.length > 0,
   });
 
+  const { data: resourceFolders } = useQuery({
+    queryKey: ["resource-folders", id, subsectionIds],
+    queryFn: async () => {
+      if (!subsectionIds.length) return [];
+      const { data, error } = await supabase
+        .from("resource_folders")
+        .select("*")
+        .in("subsection_id", subsectionIds)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: subsectionIds.length > 0,
+  });
+
   const { data: contacts } = useQuery({
     queryKey: ["contacts", id],
     queryFn: async () => {
