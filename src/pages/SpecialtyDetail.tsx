@@ -61,6 +61,7 @@ const SpecialtyDetail = () => {
   const [moveTargetId, setMoveTargetId] = useState<string>("");
   const [nativeDropSub, setNativeDropSub] = useState<string | null>(null);
   const [nativeDropUploading, setNativeDropUploading] = useState(false);
+  const [nativeUploadProgress, setNativeUploadProgress] = useState({ current: 0, total: 0, fileName: "" });
   const [selectMode, setSelectMode] = useState(false);
   const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(new Set());
   const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
