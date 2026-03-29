@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2, ListPlus, CheckSquare } from "lucide-react";
 import { BulkActionBar } from "@/components/BulkActionBar";
+import { UploadProgressBar } from "@/components/UploadProgressBar";
 
 import { toast } from "sonner";
 import { useCanManageSpecialty } from "@/hooks/useUserRole";
@@ -61,6 +62,7 @@ const SpecialtyDetail = () => {
   const [moveTargetId, setMoveTargetId] = useState<string>("");
   const [nativeDropSub, setNativeDropSub] = useState<string | null>(null);
   const [nativeDropUploading, setNativeDropUploading] = useState(false);
+  const [nativeUploadProgress, setNativeUploadProgress] = useState({ current: 0, total: 0, fileName: "" });
   const [selectMode, setSelectMode] = useState(false);
   const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(new Set());
   const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
@@ -192,8 +194,11 @@ const SpecialtyDetail = () => {
         if (folderErr) { toast.error(`Failed to create folder: ${folderName}`); continue; }
         folderIdMap[folderName] = (folderData as any).id;
       }
+      setNativeUploadProgress({ current: 0, total: droppedFiles.length, fileName: "" });
 
-      for (const { folderName, file } of droppedFiles) {
+      for (let i = 0; i < droppedFiles.length; i++) {
+        const { folderName, file } = droppedFiles[i];
+        setNativeUploadProgress({ current: i + 1, total: droppedFiles.length, fileName: file.name });
         const ext = file.name.split(".").pop();
         const path = `${id}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
@@ -700,6 +705,10 @@ const SpecialtyDetail = () => {
                     )}
                   </div>
                 </div>
+
+                {nativeDropUploading && nativeUploadProgress.total > 0 && (
+                  <UploadProgressBar current={nativeUploadProgress.current} total={nativeUploadProgress.total} currentFileName={nativeUploadProgress.fileName} />
+                )}
 
                 {!hasContent ? (
                   <Card className="border-dashed">

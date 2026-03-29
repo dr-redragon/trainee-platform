@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ResourceCard } from "@/components/ResourceCard";
+import { UploadProgressBar } from "@/components/UploadProgressBar";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface ResourceFolderProps {
@@ -54,6 +55,7 @@ export function ResourceFolder({
   const [newName, setNewName] = useState(folder.name);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: "" });
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -116,8 +118,11 @@ export function ResourceFolder({
         .order("sort_order", { ascending: false })
         .limit(1);
       let nextOrder = (existing?.[0]?.sort_order ?? -1) + 1;
+      setUploadProgress({ current: 0, total: filesToUpload.length, fileName: "" });
 
-      for (const file of filesToUpload) {
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i];
+        setUploadProgress({ current: i + 1, total: filesToUpload.length, fileName: file.name });
         const ext = file.name.split(".").pop();
         const path = `${specialtyId}/${folder.subsection_id}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
@@ -250,6 +255,9 @@ export function ResourceFolder({
 
             <CollapsibleContent>
               <div className="px-3 pb-3 space-y-2 border-t pt-2">
+                {uploading && uploadProgress.total > 0 && (
+                  <UploadProgressBar current={uploadProgress.current} total={uploadProgress.total} currentFileName={uploadProgress.fileName} />
+                )}
                 {resources.length === 0 ? (
                   <div className="flex items-center justify-center py-4 text-xs text-muted-foreground border border-dashed rounded-md">
                     Drop files here or click Upload
