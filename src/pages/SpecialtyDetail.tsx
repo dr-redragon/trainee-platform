@@ -140,9 +140,13 @@ const SpecialtyDetail = () => {
   const handleBulkDownload = async () => {
     setBulkDownloading(true);
     try {
+      const { getSignedResourceUrl } = await import("@/lib/storageUtils");
       const toDownload = (resources ?? []).filter((r) => selectedResourceIds.has(r.id));
       for (const r of toDownload) {
-        const url = r.file_url || r.external_url;
+        let url = r.external_url;
+        if (r.file_url) {
+          url = await getSignedResourceUrl(r.file_url);
+        }
         if (url) {
           const a = document.createElement("a");
           a.href = url;
@@ -151,7 +155,6 @@ const SpecialtyDetail = () => {
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-          // Small delay between downloads
           await new Promise((resolve) => setTimeout(resolve, 300));
         }
       }
