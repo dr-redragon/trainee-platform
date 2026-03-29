@@ -64,10 +64,12 @@ const SpecialtyDetail = () => {
   const handleNativeFileDrop = async (e: React.DragEvent, subsectionId: string) => {
     e.preventDefault();
     setNativeDropSub(null);
-    const files = e.dataTransfer.files;
-    if (!files.length) return;
     setNativeDropUploading(true);
     try {
+      const { getDroppedFiles, detectResourceType } = await import("@/lib/fileDropUtils");
+      const droppedFiles = await getDroppedFiles(e.dataTransfer);
+      if (!droppedFiles.length) return;
+
       const { data: { user } } = await supabase.auth.getUser();
       const { data: existing } = await supabase
         .from("resources")
@@ -77,29 +79,47 @@ const SpecialtyDetail = () => {
         .limit(1);
       let nextOrder = ((existing?.[0]?.sort_order ?? -1) + 1);
 
-      for (const file of Array.from(files)) {
+      // Group by folder name to auto-create folders
+      const folderNames = [...new Set(droppedFiles.map((d) => d.folderName).filter(Boolean))] as string[];
+      const folderIdMap: Record<string, string> = {};
+
+      for (const folderName of folderNames) {
+        const { data: folderData, error: folderErr } = await supabase
+          .from("resource_folders")
+          .insert({ name: folderName, subsection_id: subsectionId, sort_order: 0 } as any)
+          .select("id")
+          .single();
+        if (folderErr) { toast.error(`Failed to create folder: ${folderName}`); continue; }
+        folderIdMap[folderName] = (folderData as any).id;
+      }
+
+      for (const { folderName, file } of droppedFiles) {
         const ext = file.name.split(".").pop();
         const path = `${id}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
         const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
 
-        let rType = "document";
-        if (file.type === "application/pdf") rType = "pdf";
-        else if (file.type.startsWith("video/")) rType = "video";
-        else if (file.name.endsWith(".pptx") || file.name.endsWith(".ppt")) rType = "presentation";
-
         await supabase.from("resources").insert({
           title: file.name.replace(/\.[^.]+$/, ""),
-          resource_type: rType as any,
+          resource_type: detectResourceType(file) as any,
           subsection_id: subsectionId,
           file_url: urlData.publicUrl,
           added_by: user?.id ?? null,
           sort_order: nextOrder++,
+          folder_id: folderName ? folderIdMap[folderName] ?? null : null,
         } as any);
       }
-      toast.success(`${files.length} file(s) uploaded`);
+
+      const fileCount = droppedFiles.length;
+      const folderCount = folderNames.length;
+      toast.success(
+        folderCount > 0
+          ? `Uploaded ${fileCount} file(s) in ${folderCount} folder(s)`
+          : `${fileCount} file(s) uploaded`
+      );
       queryClient.invalidateQueries({ queryKey: ["resources"] });
+      queryClient.invalidateQueries({ queryKey: ["resource-folders"] });
     } catch (err: any) {
       toast.error(err.message);
     } finally {
