@@ -155,7 +155,7 @@ const SpecialtyDetail = () => {
       // Build folder name map
       const folderNameMap: Record<string, string> = {};
       for (const fId of selectedFolderIds) {
-        const folder = (folders ?? []).find((f: any) => f.id === fId);
+        const folder = (resourceFolders ?? []).find((f: any) => f.id === fId);
         if (folder) folderNameMap[fId] = (folder as any).name;
       }
 
