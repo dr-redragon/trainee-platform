@@ -138,6 +138,7 @@ export function ResourceFolder({
           sort_order: nextOrder++,
           subheading: folder.subheading,
           folder_id: folder.id,
+          file_size: file.size,
         } as any);
         if (error) toast.error(`Failed: ${file.name}`);
       }
