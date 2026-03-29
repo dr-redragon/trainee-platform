@@ -58,6 +58,54 @@ const SpecialtyDetail = () => {
   // Track manually added (empty) subheadings per subsection so they show before any resource is assigned
   const [manualSubheadings, setManualSubheadings] = useState<Record<string, string[]>>({});
   const [moveTargetId, setMoveTargetId] = useState<string>("");
+  const [nativeDropSub, setNativeDropSub] = useState<string | null>(null);
+  const [nativeDropUploading, setNativeDropUploading] = useState(false);
+
+  const handleNativeFileDrop = async (e: React.DragEvent, subsectionId: string) => {
+    e.preventDefault();
+    setNativeDropSub(null);
+    const files = e.dataTransfer.files;
+    if (!files.length) return;
+    setNativeDropUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: existing } = await supabase
+        .from("resources")
+        .select("sort_order")
+        .eq("subsection_id", subsectionId)
+        .order("sort_order", { ascending: false })
+        .limit(1);
+      let nextOrder = ((existing?.[0]?.sort_order ?? -1) + 1);
+
+      for (const file of Array.from(files)) {
+        const ext = file.name.split(".").pop();
+        const path = `${id}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
+        if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
+        const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
+
+        let rType = "document";
+        if (file.type === "application/pdf") rType = "pdf";
+        else if (file.type.startsWith("video/")) rType = "video";
+        else if (file.name.endsWith(".pptx") || file.name.endsWith(".ppt")) rType = "presentation";
+
+        await supabase.from("resources").insert({
+          title: file.name.replace(/\.[^.]+$/, ""),
+          resource_type: rType as any,
+          subsection_id: subsectionId,
+          file_url: urlData.publicUrl,
+          added_by: user?.id ?? null,
+          sort_order: nextOrder++,
+        } as any);
+      }
+      toast.success(`${files.length} file(s) uploaded`);
+      queryClient.invalidateQueries({ queryKey: ["resources"] });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setNativeDropUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (location.hash === "#discussion" && discussionRef.current) {
