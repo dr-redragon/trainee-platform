@@ -38,6 +38,7 @@ export function ResourceFolder({
   existingSubheadings,
 }: ResourceFolderProps) {
   const queryClient = useQueryClient();
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `folder:${folder.id}` });
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(folder.name);
