@@ -203,13 +203,12 @@ const SpecialtyDetail = () => {
         const path = `${id}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
-        const { data: urlData } = supabase.storage.from("resources").getPublicUrl(path);
 
         await supabase.from("resources").insert({
           title: file.name.replace(/\.[^.]+$/, ""),
           resource_type: detectResourceType(file) as any,
           subsection_id: subsectionId,
-          file_url: urlData.publicUrl,
+          file_url: path,
           added_by: user?.id ?? null,
           sort_order: nextOrder++,
           folder_id: folderName ? folderIdMap[folderName] ?? null : null,
