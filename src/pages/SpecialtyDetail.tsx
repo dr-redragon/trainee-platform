@@ -140,25 +140,70 @@ const SpecialtyDetail = () => {
   const handleBulkDownload = async () => {
     setBulkDownloading(true);
     try {
-      const { getSignedResourceUrl } = await import("@/lib/storageUtils");
-      const toDownload = (resources ?? []).filter((r) => selectedResourceIds.has(r.id));
-      for (const r of toDownload) {
-        let url = r.external_url;
-        if (r.file_url) {
-          url = await getSignedResourceUrl(r.file_url);
-        }
-        if (url) {
-          const a = document.createElement("a");
-          a.href = url;
-          a.target = "_blank";
-          a.download = r.title;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          await new Promise((resolve) => setTimeout(resolve, 300));
+      const { getSignedResourceUrl, extractStoragePath } = await import("@/lib/storageUtils");
+      const JSZip = (await import("jszip")).default;
+      const { saveAs } = await import("file-saver");
+      const zip = new JSZip();
+
+      // Gather all resources to download: individually selected + those inside selected folders
+      const allResources = resources ?? [];
+      const folderResources = allResources.filter((r) => selectedFolderIds.has((r as any).folder_id ?? ""));
+      const individualResources = allResources.filter(
+        (r) => selectedResourceIds.has(r.id) && !selectedFolderIds.has((r as any).folder_id ?? "")
+      );
+
+      // Build folder name map
+      const folderNameMap: Record<string, string> = {};
+      for (const fId of selectedFolderIds) {
+        const folder = (resourceFolders ?? []).find((f: any) => f.id === fId);
+        if (folder) folderNameMap[fId] = (folder as any).name;
+      }
+
+      const filesToZip = [
+        ...folderResources.map((r) => ({
+          resource: r,
+          folderName: folderNameMap[(r as any).folder_id] || "folder",
+        })),
+        ...individualResources.map((r) => ({ resource: r, folderName: null as string | null })),
+      ];
+
+      if (filesToZip.length === 0) {
+        toast.error("No downloadable files selected");
+        setBulkDownloading(false);
+        return;
+      }
+
+      let downloaded = 0;
+      for (const { resource: r, folderName } of filesToZip) {
+        try {
+          let url: string | null = r.external_url;
+          if (r.file_url) {
+            url = await getSignedResourceUrl(r.file_url);
+          }
+          if (!url) continue;
+
+          const response = await fetch(url);
+          if (!response.ok) continue;
+          const blob = await response.blob();
+
+          const ext = (r.file_url || r.external_url || "").split(".").pop()?.split("?")[0] || "bin";
+          const fileName = `${r.title}.${ext}`;
+          const path = folderName ? `${folderName}/${fileName}` : fileName;
+
+          zip.file(path, blob);
+          downloaded++;
+        } catch {
+          console.warn(`Skipped: ${r.title}`);
         }
       }
-      toast.success(`${toDownload.length} file(s) downloading`);
+
+      if (downloaded === 0) {
+        toast.error("No files could be downloaded");
+      } else {
+        const content = await zip.generateAsync({ type: "blob" });
+        saveAs(content, "resources.zip");
+        toast.success(`${downloaded} file(s) downloaded as ZIP`);
+      }
     } catch (e: any) {
       toast.error(e.message);
     } finally {
