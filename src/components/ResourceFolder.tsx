@@ -262,6 +262,9 @@ export function ResourceFolder({
                       canManage={canManage}
                       onDelete={onDeleteResource}
                       existingSubheadings={existingSubheadings}
+                      selectable={selectable}
+                      selected={selectedIds?.has(r.id)}
+                      onToggleSelect={onToggleSelect}
                     />
                   ))
                 )}
