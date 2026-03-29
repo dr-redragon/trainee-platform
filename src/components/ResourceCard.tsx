@@ -36,7 +36,7 @@ interface ResourceCardProps {
   onToggleSelect?: (id: string) => void;
 }
 
-export function ResourceCard({ resource, canManage, onDelete, existingSubheadings = [] }: ResourceCardProps) {
+export function ResourceCard({ resource, canManage, onDelete, existingSubheadings = [], selectable, selected, onToggleSelect }: ResourceCardProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const { data: user } = useCurrentUser();
