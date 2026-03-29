@@ -523,6 +523,44 @@ export type Database = {
           },
         ]
       }
+      resource_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number | null
+          subheading: string | null
+          subsection_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number | null
+          subheading?: string | null
+          subsection_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number | null
+          subheading?: string | null
+          subsection_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_folders_subsection_id_fkey"
+            columns: ["subsection_id"]
+            isOneToOne: false
+            referencedRelation: "subsections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resources: {
         Row: {
           added_by: string | null
@@ -531,6 +569,7 @@ export type Database = {
           embed_url: string | null
           external_url: string | null
           file_url: string | null
+          folder_id: string | null
           id: string
           resource_type: Database["public"]["Enums"]["resource_type"]
           sort_order: number | null
@@ -546,6 +585,7 @@ export type Database = {
           embed_url?: string | null
           external_url?: string | null
           file_url?: string | null
+          folder_id?: string | null
           id?: string
           resource_type?: Database["public"]["Enums"]["resource_type"]
           sort_order?: number | null
@@ -561,6 +601,7 @@ export type Database = {
           embed_url?: string | null
           external_url?: string | null
           file_url?: string | null
+          folder_id?: string | null
           id?: string
           resource_type?: Database["public"]["Enums"]["resource_type"]
           sort_order?: number | null
@@ -570,6 +611,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "resources_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "resource_folders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "resources_subsection_id_fkey"
             columns: ["subsection_id"]

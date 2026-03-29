@@ -8,6 +8,8 @@ import { DiscussionBoard } from "@/components/DiscussionBoard";
 import { SpecialtyNoticeBoard } from "@/components/SpecialtyNoticeBoard";
 import { DroppableSubheadingGroup, DroppableUngrouped } from "@/components/DroppableSubheadingGroup";
 import { AddResourceDialog } from "@/components/AddResourceDialog";
+import { AddFolderDialog } from "@/components/AddFolderDialog";
+import { ResourceFolder } from "@/components/ResourceFolder";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -114,6 +116,21 @@ const SpecialtyDetail = () => {
       if (!subsectionIds.length) return [];
       const { data, error } = await supabase
         .from("resources")
+        .select("*")
+        .in("subsection_id", subsectionIds)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: subsectionIds.length > 0,
+  });
+
+  const { data: resourceFolders } = useQuery({
+    queryKey: ["resource-folders", id, subsectionIds],
+    queryFn: async () => {
+      if (!subsectionIds.length) return [];
+      const { data, error } = await supabase
+        .from("resource_folders")
         .select("*")
         .in("subsection_id", subsectionIds)
         .order("sort_order");
@@ -408,18 +425,25 @@ const SpecialtyDetail = () => {
               .filter((r) => r.subsection_id === sub.id)
               .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
+            const subFolders = (resourceFolders ?? []).filter((f: any) => f.subsection_id === sub.id);
+
             const resourceSubheadings = [...new Set(
               subResources.map((r) => (r as any).subheading).filter(Boolean) as string[]
             )];
-            // Merge in any manually-added (empty) subheadings
             const manual = manualSubheadings[sub.id] ?? [];
             const allSubheadings = [...new Set([...resourceSubheadings, ...manual])];
 
-            const ungrouped = subResources.filter((r) => !(r as any).subheading);
+            // Filter out resources that belong to folders for the main list
+            const nonFolderResources = subResources.filter((r) => !(r as any).folder_id);
+            const ungrouped = nonFolderResources.filter((r) => !(r as any).subheading);
             const grouped = allSubheadings.map((sh) => ({
               name: sh,
-              resources: subResources.filter((r) => (r as any).subheading === sh),
+              resources: nonFolderResources.filter((r) => (r as any).subheading === sh),
+              folders: subFolders.filter((f: any) => f.subheading === sh),
             }));
+            const ungroupedFolders = subFolders.filter((f: any) => !f.subheading);
+
+            const hasContent = subResources.length > 0 || subFolders.length > 0 || grouped.length > 0;
 
             return (
               <TabsContent key={sub.id} value={sub.name} className="mt-4 space-y-3">
@@ -436,6 +460,7 @@ const SpecialtyDetail = () => {
                         >
                           <ListPlus className="h-3.5 w-3.5" /> Subheading
                         </Button>
+                        <AddFolderDialog subsectionId={sub.id} />
                         <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={allSubheadings} />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -468,12 +493,12 @@ const SpecialtyDetail = () => {
                   </div>
                 </div>
 
-                {subResources.length === 0 && grouped.every(g => g.resources.length === 0) && grouped.length === 0 ? (
+                {!hasContent ? (
                   <Card className="border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                       <FolderOpen className="h-10 w-10 text-muted-foreground/30 mb-3" />
                       <p className="text-sm text-muted-foreground">No resources yet</p>
-                      {canManage && <p className="text-xs text-muted-foreground/60 mt-1">Click "Add Resource" to get started</p>}
+                      {canManage && <p className="text-xs text-muted-foreground/60 mt-1">Click "Add Resource" or "Folder" to get started</p>}
                     </CardContent>
                   </Card>
                 ) : (
@@ -483,25 +508,50 @@ const SpecialtyDetail = () => {
                     onDragEnd={(e) => handleCrossGroupDragEnd(e, subResources, allSubheadings)}
                   >
                     <div className="space-y-4">
-                      {(ungrouped.length > 0 || canManage) && (
-                        <DroppableUngrouped
-                          resources={ungrouped}
-                          canManage={!!canManage}
-                          onDelete={(rid) => deleteResource.mutate(rid)}
-                          existingSubheadings={allSubheadings}
-                        />
+                      {(ungrouped.length > 0 || ungroupedFolders.length > 0 || canManage) && (
+                        <>
+                          <DroppableUngrouped
+                            resources={ungrouped}
+                            canManage={!!canManage}
+                            onDelete={(rid) => deleteResource.mutate(rid)}
+                            existingSubheadings={allSubheadings}
+                          />
+                          {ungroupedFolders.map((f: any) => (
+                            <ResourceFolder
+                              key={f.id}
+                              folder={f}
+                              resources={subResources.filter((r) => (r as any).folder_id === f.id)}
+                              canManage={!!canManage}
+                              specialtyId={specialty.id}
+                              onDeleteResource={(rid) => deleteResource.mutate(rid)}
+                              existingSubheadings={allSubheadings}
+                            />
+                          ))}
+                        </>
                       )}
 
                       {grouped.map((group) => (
-                        <DroppableSubheadingGroup
-                          key={group.name}
-                          groupId={group.name}
-                          name={group.name}
-                          resources={group.resources}
-                          canManage={!!canManage}
-                          onDelete={(rid) => deleteResource.mutate(rid)}
-                          existingSubheadings={allSubheadings}
-                        />
+                        <div key={group.name} className="space-y-2">
+                          <DroppableSubheadingGroup
+                            groupId={group.name}
+                            name={group.name}
+                            resources={group.resources}
+                            canManage={!!canManage}
+                            onDelete={(rid) => deleteResource.mutate(rid)}
+                            existingSubheadings={allSubheadings}
+                          />
+                          {group.folders.map((f: any) => (
+                            <ResourceFolder
+                              key={f.id}
+                              folder={f}
+                              resources={subResources.filter((r) => (r as any).folder_id === f.id)}
+                              canManage={!!canManage}
+                              specialtyId={specialty.id}
+                              onDeleteResource={(rid) => deleteResource.mutate(rid)}
+                              existingSubheadings={allSubheadings}
+                            />
+                          ))}
+                        </div>
                       ))}
                     </div>
                   </DndContext>
