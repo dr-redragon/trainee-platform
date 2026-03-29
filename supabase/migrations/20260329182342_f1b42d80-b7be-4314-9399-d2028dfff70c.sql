@@ -1,0 +1,1 @@
+ALTER TABLE public.resources ADD COLUMN file_size bigint DEFAULT NULL;

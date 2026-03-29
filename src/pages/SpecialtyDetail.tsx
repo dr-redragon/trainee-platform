@@ -213,6 +213,7 @@ const SpecialtyDetail = () => {
           added_by: user?.id ?? null,
           sort_order: nextOrder++,
           folder_id: folderName ? folderIdMap[folderName] ?? null : null,
+          file_size: file.size,
         } as any);
       }
 

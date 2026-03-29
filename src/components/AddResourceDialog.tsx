@@ -103,6 +103,7 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
           added_by: user?.id ?? null,
           sort_order: nextOrder++,
           subheading: finalSubheading || null,
+          file_size: file.size,
         } as any);
       }
       toast.success(`${files.length} files uploaded`);
@@ -151,6 +152,7 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
         added_by: user?.id ?? null,
         sort_order: nextOrder,
         subheading: finalSubheading || null,
+        file_size: file?.size ?? null,
       } as any);
       if (error) throw error;
     },
