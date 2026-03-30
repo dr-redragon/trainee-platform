@@ -250,12 +250,12 @@ export function AdminUsers() {
 
   // Filtering
   const filtered = profiles?.filter((p) => {
-    // Text search
-    if (search) {
-      const q = search.toLowerCase();
+    // Text search - supports multi-word queries like "John Smith"
+    if (search.trim()) {
+      const fullName = `${p.first_name ?? ""} ${p.last_name ?? ""}`.toLowerCase();
+      const q = search.toLowerCase().trim();
       if (
-        !p.first_name?.toLowerCase().includes(q) &&
-        !p.last_name?.toLowerCase().includes(q) &&
+        !fullName.includes(q) &&
         !p.email?.toLowerCase().includes(q)
       ) return false;
     }
