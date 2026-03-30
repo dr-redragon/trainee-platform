@@ -48,6 +48,36 @@ export async function getSignedResourceUrl(fileUrl: string): Promise<string | nu
 }
 
 /**
+ * Downloads a resource file as a Blob directly via Supabase SDK.
+ * Falls back to fetch for external URLs.
+ */
+export async function downloadResourceBlob(fileUrl: string): Promise<Blob | null> {
+  const path = extractStoragePath(fileUrl);
+
+  // If it's a storage file, use the SDK download which avoids CORS issues
+  if (path) {
+    const { data, error } = await supabase.storage
+      .from("resources")
+      .download(path);
+
+    if (error) {
+      console.error("Failed to download file:", error);
+      return null;
+    }
+    return data;
+  }
+
+  // External URL — try fetch
+  try {
+    const response = await fetch(fileUrl);
+    if (!response.ok) return null;
+    return await response.blob();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Returns true if the file_url points to Supabase storage (vs external).
  */
 export function isStorageUrl(fileUrl: string | null): boolean {
