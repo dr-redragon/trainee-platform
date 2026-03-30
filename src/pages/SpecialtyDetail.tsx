@@ -142,7 +142,6 @@ const SpecialtyDetail = () => {
     try {
       const { downloadResourceBlob } = await import("@/lib/storageUtils");
       const JSZip = (await import("jszip")).default;
-      const { saveAs } = await import("file-saver");
       const zip = new JSZip();
 
       // Gather all resources to download: individually selected + those inside selected folders
@@ -197,7 +196,15 @@ const SpecialtyDetail = () => {
         toast.error("No files could be downloaded");
       } else {
         const content = await zip.generateAsync({ type: "blob" });
-        saveAs(content, "resources.zip");
+        const url = URL.createObjectURL(content);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `resources-${new Date().toISOString().slice(0, 10)}.zip`;
+        link.rel = "noopener";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
         toast.success(`${downloaded} file(s) downloaded as ZIP`);
       }
     } catch (e: any) {
