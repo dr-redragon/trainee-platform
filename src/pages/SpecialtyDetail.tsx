@@ -140,7 +140,7 @@ const SpecialtyDetail = () => {
   const handleBulkDownload = async () => {
     setBulkDownloading(true);
     try {
-      const { getSignedResourceUrl, extractStoragePath } = await import("@/lib/storageUtils");
+      const { downloadResourceBlob } = await import("@/lib/storageUtils");
       const JSZip = (await import("jszip")).default;
       const { saveAs } = await import("file-saver");
       const zip = new JSZip();
@@ -176,17 +176,13 @@ const SpecialtyDetail = () => {
       let downloaded = 0;
       for (const { resource: r, folderName } of filesToZip) {
         try {
-          let url: string | null = r.external_url;
-          if (r.file_url) {
-            url = await getSignedResourceUrl(r.file_url);
-          }
-          if (!url) continue;
+          const fileSource = r.file_url || r.external_url;
+          if (!fileSource) continue;
 
-          const response = await fetch(url);
-          if (!response.ok) continue;
-          const blob = await response.blob();
+          const blob = await downloadResourceBlob(fileSource);
+          if (!blob) continue;
 
-          const ext = (r.file_url || r.external_url || "").split(".").pop()?.split("?")[0] || "bin";
+          const ext = fileSource.split(".").pop()?.split("?")[0] || "bin";
           const fileName = `${r.title}.${ext}`;
           const path = folderName ? `${folderName}/${fileName}` : fileName;
 
