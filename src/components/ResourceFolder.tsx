@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  FolderOpen, FolderClosed, ChevronDown, MoreVertical, Pencil, Trash2, Upload, FileUp, Square, CheckSquare,
+  FolderOpen, FolderClosed, ChevronDown, MoreVertical, Pencil, Trash2, Upload, FileUp, Square, CheckSquare, Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ResourceCard } from "@/components/ResourceCard";
