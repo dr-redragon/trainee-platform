@@ -302,6 +302,9 @@ export function ResourceFolder({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handleDownloadFolder} disabled={downloading || resources.length === 0}>
+                        <Download className="h-3.5 w-3.5 mr-2" /> {downloading ? "Downloading…" : "Download Folder"}
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => { setRenaming(true); setNewName(folder.name); }}>
                         <Pencil className="h-3.5 w-3.5 mr-2" /> Rename
                       </DropdownMenuItem>
