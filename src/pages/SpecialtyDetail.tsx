@@ -143,10 +143,41 @@ const SpecialtyDetail = () => {
       const { downloadResourceBlob } = await import("@/lib/storageUtils");
       const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
+      const usedZipPaths = new Set<string>();
+
+      const sanitizeZipSegment = (value: string) =>
+        value.trim().replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ") || "untitled";
+
+      const getUniqueZipPath = (resource: Tables<"resources">, folderName: string | null) => {
+        const source = resource.file_url || resource.external_url || "";
+        const sourceFileName = source.split("/").pop()?.split("?")[0] ?? "";
+        const sourceExt = sourceFileName.includes(".") ? sourceFileName.split(".").pop() : "";
+        const baseName = sanitizeZipSegment(resource.title || "resource");
+        const ext = sourceExt ? `.${sourceExt}` : "";
+        const folderPrefix = folderName ? `${sanitizeZipSegment(folderName)}/` : "";
+
+        let candidate = `${folderPrefix}${baseName}${ext}`;
+        let duplicateIndex = 2;
+
+        while (usedZipPaths.has(candidate)) {
+          candidate = `${folderPrefix}${baseName} (${duplicateIndex})${ext}`;
+          duplicateIndex += 1;
+        }
+
+        usedZipPaths.add(candidate);
+        return candidate;
+      };
 
       // Gather all resources to download: individually selected + those inside selected folders
       const allResources = resources ?? [];
-      const folderResources = allResources.filter((r) => selectedFolderIds.has((r as any).folder_id ?? ""));
+      const folderResources = Array.from(selectedFolderIds).flatMap((folderId) =>
+        allResources
+          .filter((r) => (r as any).folder_id === folderId)
+          .map((resource) => ({
+            resource,
+            folderId,
+          }))
+      );
       const individualResources = allResources.filter(
         (r) => selectedResourceIds.has(r.id) && !selectedFolderIds.has((r as any).folder_id ?? "")
       );
@@ -159,9 +190,9 @@ const SpecialtyDetail = () => {
       }
 
       const filesToZip = [
-        ...folderResources.map((r) => ({
-          resource: r,
-          folderName: folderNameMap[(r as any).folder_id] || "folder",
+        ...folderResources.map(({ resource, folderId }) => ({
+          resource,
+          folderName: folderNameMap[folderId] || "folder",
         })),
         ...individualResources.map((r) => ({ resource: r, folderName: null as string | null })),
       ];
@@ -181,9 +212,7 @@ const SpecialtyDetail = () => {
           const blob = await downloadResourceBlob(fileSource);
           if (!blob) continue;
 
-          const ext = fileSource.split(".").pop()?.split("?")[0] || "bin";
-          const fileName = `${r.title}.${ext}`;
-          const path = folderName ? `${folderName}/${fileName}` : fileName;
+          const path = getUniqueZipPath(r, folderName);
 
           zip.file(path, blob);
           downloaded++;
