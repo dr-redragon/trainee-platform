@@ -276,6 +276,19 @@ export function ResourceFolder({
                 </button>
               </CollapsibleTrigger>
 
+              {!canManage && !renaming && resources.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1 shrink-0"
+                  onClick={(e) => { e.stopPropagation(); handleDownloadFolder(); }}
+                  disabled={downloading}
+                >
+                  <Download className="h-3 w-3" />
+                  {downloading ? "Downloading…" : "Download"}
+                </Button>
+              )}
+
               {canManage && !renaming && (
                 <div className="flex items-center gap-0.5 shrink-0">
                   <Button
