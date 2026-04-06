@@ -58,6 +58,67 @@ export function ResourceFolder({
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: "" });
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadFolder = async () => {
+    if (resources.length === 0) {
+      toast.info("This folder is empty");
+      return;
+    }
+    setDownloading(true);
+    try {
+      const { downloadResourceBlob } = await import("@/lib/storageUtils");
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+
+      let downloaded = 0;
+      const usedNames = new Set<string>();
+
+      for (const r of resources) {
+        try {
+          const fileSource = r.file_url || r.external_url;
+          if (!fileSource) continue;
+          const blob = await downloadResourceBlob(fileSource);
+          if (!blob) continue;
+
+          const ext = (r.file_url || r.external_url || "").split(".").pop()?.split("?")[0] || "bin";
+          let baseName = (r.title || "resource").replace(/[\\/:*?"<>|]/g, "_");
+          let fileName = `${baseName}.${ext}`;
+          let counter = 2;
+          while (usedNames.has(fileName.toLowerCase())) {
+            fileName = `${baseName} (${counter}).${ext}`;
+            counter++;
+          }
+          usedNames.add(fileName.toLowerCase());
+
+          zip.file(fileName, blob);
+          downloaded++;
+        } catch {
+          console.warn(`Skipped: ${r.title}`);
+        }
+      }
+
+      if (downloaded === 0) {
+        toast.error("No files could be downloaded");
+      } else {
+        const content = await zip.generateAsync({ type: "blob" });
+        const url = URL.createObjectURL(content);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${folder.name.replace(/[\\/:*?"<>|]/g, "_")}.zip`;
+        link.rel = "noopener";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        toast.success(`${downloaded} file(s) downloaded as ZIP`);
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const renameFolder = useMutation({
     mutationFn: async () => {
