@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  FolderOpen, FolderClosed, ChevronDown, MoreVertical, Pencil, Trash2, Upload, FileUp, Square, CheckSquare,
+  FolderOpen, FolderClosed, ChevronDown, MoreVertical, Pencil, Trash2, Upload, FileUp, Square, CheckSquare, Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ResourceCard } from "@/components/ResourceCard";
@@ -58,6 +58,67 @@ export function ResourceFolder({
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: "" });
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadFolder = async () => {
+    if (resources.length === 0) {
+      toast.info("This folder is empty");
+      return;
+    }
+    setDownloading(true);
+    try {
+      const { downloadResourceBlob } = await import("@/lib/storageUtils");
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+
+      let downloaded = 0;
+      const usedNames = new Set<string>();
+
+      for (const r of resources) {
+        try {
+          const fileSource = r.file_url || r.external_url;
+          if (!fileSource) continue;
+          const blob = await downloadResourceBlob(fileSource);
+          if (!blob) continue;
+
+          const ext = (r.file_url || r.external_url || "").split(".").pop()?.split("?")[0] || "bin";
+          let baseName = (r.title || "resource").replace(/[\\/:*?"<>|]/g, "_");
+          let fileName = `${baseName}.${ext}`;
+          let counter = 2;
+          while (usedNames.has(fileName.toLowerCase())) {
+            fileName = `${baseName} (${counter}).${ext}`;
+            counter++;
+          }
+          usedNames.add(fileName.toLowerCase());
+
+          zip.file(fileName, blob);
+          downloaded++;
+        } catch {
+          console.warn(`Skipped: ${r.title}`);
+        }
+      }
+
+      if (downloaded === 0) {
+        toast.error("No files could be downloaded");
+      } else {
+        const content = await zip.generateAsync({ type: "blob" });
+        const url = URL.createObjectURL(content);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${folder.name.replace(/[\\/:*?"<>|]/g, "_")}.zip`;
+        link.rel = "noopener";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        toast.success(`${downloaded} file(s) downloaded as ZIP`);
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const renameFolder = useMutation({
     mutationFn: async () => {
@@ -215,6 +276,19 @@ export function ResourceFolder({
                 </button>
               </CollapsibleTrigger>
 
+              {!canManage && !renaming && resources.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1 shrink-0"
+                  onClick={(e) => { e.stopPropagation(); handleDownloadFolder(); }}
+                  disabled={downloading}
+                >
+                  <Download className="h-3 w-3" />
+                  {downloading ? "Downloading…" : "Download"}
+                </Button>
+              )}
+
               {canManage && !renaming && (
                 <div className="flex items-center gap-0.5 shrink-0">
                   <Button
@@ -241,6 +315,9 @@ export function ResourceFolder({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handleDownloadFolder} disabled={downloading || resources.length === 0}>
+                        <Download className="h-3.5 w-3.5 mr-2" /> {downloading ? "Downloading…" : "Download Folder"}
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => { setRenaming(true); setNewName(folder.name); }}>
                         <Pencil className="h-3.5 w-3.5 mr-2" /> Rename
                       </DropdownMenuItem>
