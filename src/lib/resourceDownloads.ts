@@ -1,3 +1,4 @@
+import { saveAs } from "file-saver";
 import type { Tables } from "@/integrations/supabase/types";
 import { downloadResourceBlob } from "@/lib/storageUtils";
 
@@ -97,13 +98,7 @@ function triggerAnchorDownload(href: string, fileName: string) {
 }
 
 async function saveBlobAsFile(blob: Blob, fileName: string) {
-  const objectUrl = URL.createObjectURL(blob);
-
-  try {
-    triggerAnchorDownload(objectUrl, fileName);
-  } finally {
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-  }
+  saveAs(blob, fileName);
 }
 
 export function getResourceDownloadName(resource: ResourceRecord) {
