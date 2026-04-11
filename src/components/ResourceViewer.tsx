@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ExternalLink, Download, FileText, AlertTriangle, Loader2 } from "lucide-react";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import type { Tables } from "@/integrations/supabase/types";
+import { toast } from "sonner";
+import { downloadResourceFile } from "@/lib/resourceDownloads";
 import { getSignedResourceUrl, extractStoragePath } from "@/lib/storageUtils";
 
 interface ResourceViewerProps {
@@ -51,6 +54,7 @@ function isYouTube(resource: Tables<"resources">): string | null {
 export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerProps) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!open || !resource?.file_url) {
@@ -74,9 +78,22 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
   const isStorageFile = resource.file_url && extractStoragePath(resource.file_url) !== null;
   const resolvedFileUrl = isStorageFile ? signedUrl : resource.file_url;
   const rawUrl = resolvedFileUrl || resource.external_url || resource.embed_url;
+  const canDownload = Boolean(resource.file_url || resource.external_url);
   const viewerUrl = rawUrl ? getViewerUrl(rawUrl) : null;
   const ytId = isYouTube(resource);
   const video = isVideo(resource);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const fileName = await downloadResourceFile(resource);
+      toast.success(`${fileName} downloaded`);
+    } catch (error: any) {
+      toast.error(error.message || "Unable to download this file");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,18 +127,21 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
               <ExternalLink className="h-3 w-3" /> Open
             </a>
           )}
-          {resolvedFileUrl && (
-            <a
-              href={resolvedFileUrl}
-              download={resource.title || "download"}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground transition-colors"
+          {canDownload && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1 text-xs"
+              disabled={downloading}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownload();
+              }}
             >
-              <Download className="h-3 w-3" /> Download
-            </a>
+              {downloading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+              {downloading ? "Downloading…" : "Download"}
+            </Button>
           )}
         </div>
 

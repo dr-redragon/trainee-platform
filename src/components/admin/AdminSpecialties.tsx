@@ -14,6 +14,7 @@ import { Plus, Copy, ChevronRight, ChevronDown } from "lucide-react";
 import { getIcon } from "@/lib/iconMap";
 import { IconColorPicker } from "@/components/IconColorPicker";
 import { toast } from "sonner";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 export function AdminSpecialties() {
   const queryClient = useQueryClient();
@@ -208,7 +209,7 @@ export function AdminSpecialties() {
 
   const updateAppearance = useMutation({
     mutationFn: async ({ id, icon_name, color }: { id: string; icon_name?: string; color?: string }) => {
-      const update: Record<string, string> = {};
+      const update: TablesUpdate<"specialties"> = {};
       if (icon_name !== undefined) update.icon_name = icon_name;
       if (color !== undefined) update.color = color;
       const { error } = await supabase.from("specialties").update(update).eq("id", id);
