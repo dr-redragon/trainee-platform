@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { ResourceCard } from "@/components/ResourceCard";
 import { UploadProgressBar } from "@/components/UploadProgressBar";
+import { downloadResourcesAsZip } from "@/lib/resourceDownloads";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface ResourceFolderProps {
@@ -65,56 +66,21 @@ export function ResourceFolder({
       toast.info("This folder is empty");
       return;
     }
+
     setDownloading(true);
     try {
-      const { downloadResourceBlob } = await import("@/lib/storageUtils");
-      const JSZip = (await import("jszip")).default;
-      const zip = new JSZip();
+      const { downloaded, skipped } = await downloadResourcesAsZip(
+        resources.map((resource) => ({ resource })),
+        folder.name,
+      );
 
-      let downloaded = 0;
-      const usedNames = new Set<string>();
-
-      for (const r of resources) {
-        try {
-          const fileSource = r.file_url || r.external_url;
-          if (!fileSource) continue;
-          const blob = await downloadResourceBlob(fileSource);
-          if (!blob) continue;
-
-          const ext = (r.file_url || r.external_url || "").split(".").pop()?.split("?")[0] || "bin";
-          let baseName = (r.title || "resource").replace(/[\\/:*?"<>|]/g, "_");
-          let fileName = `${baseName}.${ext}`;
-          let counter = 2;
-          while (usedNames.has(fileName.toLowerCase())) {
-            fileName = `${baseName} (${counter}).${ext}`;
-            counter++;
-          }
-          usedNames.add(fileName.toLowerCase());
-
-          zip.file(fileName, blob);
-          downloaded++;
-        } catch {
-          console.warn(`Skipped: ${r.title}`);
-        }
-      }
-
-      if (downloaded === 0) {
-        toast.error("No files could be downloaded");
-      } else {
-        const content = await zip.generateAsync({ type: "blob" });
-        const url = URL.createObjectURL(content);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${folder.name.replace(/[\\/:*?"<>|]/g, "_")}.zip`;
-        link.rel = "noopener";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-        toast.success(`${downloaded} file(s) downloaded as ZIP`);
-      }
+      toast.success(
+        skipped.length > 0
+          ? `${downloaded} file(s) downloaded, ${skipped.length} skipped`
+          : `${downloaded} file(s) downloaded`,
+      );
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(e.message || "Unable to download this folder");
     } finally {
       setDownloading(false);
     }

@@ -37,6 +37,7 @@ import {
 import { SortableContext, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { SortableTabTrigger } from "@/components/SortableTabTrigger";
 import type { Tables } from "@/integrations/supabase/types";
+import { downloadResourcesAsZip } from "@/lib/resourceDownloads";
 
 const SpecialtyDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -140,35 +141,6 @@ const SpecialtyDetail = () => {
   const handleBulkDownload = async () => {
     setBulkDownloading(true);
     try {
-      const { downloadResourceBlob } = await import("@/lib/storageUtils");
-      const JSZip = (await import("jszip")).default;
-      const zip = new JSZip();
-      const usedZipPaths = new Set<string>();
-
-      const sanitizeZipSegment = (value: string) =>
-        value.trim().replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ") || "untitled";
-
-      const getUniqueZipPath = (resource: Tables<"resources">, folderName: string | null) => {
-        const source = resource.file_url || resource.external_url || "";
-        const sourceFileName = source.split("/").pop()?.split("?")[0] ?? "";
-        const sourceExt = sourceFileName.includes(".") ? sourceFileName.split(".").pop() : "";
-        const baseName = sanitizeZipSegment(resource.title || "resource");
-        const ext = sourceExt ? `.${sourceExt}` : "";
-        const folderPrefix = folderName ? `${sanitizeZipSegment(folderName)}/` : "";
-
-        let candidate = `${folderPrefix}${baseName}${ext}`;
-        let duplicateIndex = 2;
-
-        while (usedZipPaths.has(candidate)) {
-          candidate = `${folderPrefix}${baseName} (${duplicateIndex})${ext}`;
-          duplicateIndex += 1;
-        }
-
-        usedZipPaths.add(candidate);
-        return candidate;
-      };
-
-      // Gather all resources to download: individually selected + those inside selected folders
       const allResources = resources ?? [];
       const folderResources = Array.from(selectedFolderIds).flatMap((folderId) =>
         allResources
@@ -199,45 +171,21 @@ const SpecialtyDetail = () => {
 
       if (filesToZip.length === 0) {
         toast.error("No downloadable files selected");
-        setBulkDownloading(false);
         return;
       }
 
-      let downloaded = 0;
-      for (const { resource: r, folderName } of filesToZip) {
-        try {
-          const fileSource = r.file_url || r.external_url;
-          if (!fileSource) continue;
+      const { downloaded, skipped } = await downloadResourcesAsZip(
+        filesToZip,
+        `resources-${new Date().toISOString().slice(0, 10)}`,
+      );
 
-          const blob = await downloadResourceBlob(fileSource);
-          if (!blob) continue;
-
-          const path = getUniqueZipPath(r, folderName);
-
-          zip.file(path, blob);
-          downloaded++;
-        } catch {
-          console.warn(`Skipped: ${r.title}`);
-        }
-      }
-
-      if (downloaded === 0) {
-        toast.error("No files could be downloaded");
-      } else {
-        const content = await zip.generateAsync({ type: "blob" });
-        const url = URL.createObjectURL(content);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `resources-${new Date().toISOString().slice(0, 10)}.zip`;
-        link.rel = "noopener";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-        toast.success(`${downloaded} file(s) downloaded as ZIP`);
-      }
+      toast.success(
+        skipped.length > 0
+          ? `${downloaded} file(s) downloaded, ${skipped.length} skipped`
+          : `${downloaded} file(s) downloaded`,
+      );
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(e.message || "Unable to download the selected files");
     } finally {
       setBulkDownloading(false);
     }

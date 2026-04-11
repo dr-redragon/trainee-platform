@@ -52,24 +52,11 @@ export async function getSignedResourceUrl(fileUrl: string): Promise<string | nu
  * Falls back to fetch for external URLs.
  */
 export async function downloadResourceBlob(fileUrl: string): Promise<Blob | null> {
-  const path = extractStoragePath(fileUrl);
+  const resolvedUrl = await getSignedResourceUrl(fileUrl);
+  if (!resolvedUrl) return null;
 
-  // If it's a storage file, use the SDK download which avoids CORS issues
-  if (path) {
-    const { data, error } = await supabase.storage
-      .from("resources")
-      .download(path);
-
-    if (error) {
-      console.error("Failed to download file:", error);
-      return null;
-    }
-    return data;
-  }
-
-  // External URL — try fetch
   try {
-    const response = await fetch(fileUrl);
+    const response = await fetch(resolvedUrl);
     if (!response.ok) return null;
     return await response.blob();
   } catch {
