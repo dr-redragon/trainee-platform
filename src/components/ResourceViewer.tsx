@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Download, FileText, AlertTriangle, Loader2 } from "lucide-react";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+
 import type { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { downloadResourceFile } from "@/lib/resourceDownloads";
@@ -98,10 +98,10 @@ export function ResourceViewer({ resource, open, onOpenChange }: ResourceViewerP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-[95vw] h-[85vh] flex flex-col p-0 gap-0">
-        <VisuallyHidden>
+        <span className="sr-only">
           <DialogTitle>{resource.title}</DialogTitle>
           <DialogDescription>Viewing resource: {resource.title}</DialogDescription>
-        </VisuallyHidden>
+        </span>
 
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b bg-secondary/30 pr-12">

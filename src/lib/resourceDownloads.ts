@@ -1,6 +1,6 @@
 import type { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
-import { downloadResourceBlob, extractStoragePath } from "@/lib/storageUtils";
+import { extractStoragePath } from "@/lib/storageUtils";
 
 type ResourceRecord = Tables<"resources">;
 
@@ -24,7 +24,11 @@ function sanitizeSegment(value: string | null | undefined, fallback: string) {
 
 function extractSourceFileName(source: string) {
   const rawName = source.split("/").pop()?.split("?")[0] ?? "";
-  try { return decodeURIComponent(rawName); } catch { return rawName; }
+  try {
+    return decodeURIComponent(rawName);
+  } catch {
+    return rawName;
+  }
 }
 
 function splitFileName(fileName: string) {
@@ -47,63 +51,6 @@ function getResourceExtension(r: ResourceRecord) {
   return splitFileName(sourceName).extension.toLowerCase();
 }
 
-function buildUniquePath(candidate: string, used: Set<string>) {
-  const norm = candidate.toLowerCase();
-  if (!used.has(norm)) { used.add(norm); return candidate; }
-  const { base, extension } = splitFileName(candidate);
-  let n = 2;
-  let next = `${base} (${n})${extension}`;
-  while (used.has(next.toLowerCase())) { n++; next = `${base} (${n})${extension}`; }
-  used.add(next.toLowerCase());
-  return next;
-}
-
-function isSafari() {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent;
-  return /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
-}
-
-/**
- * Trigger a download via an anchor click on a real URL.
- * Works in Safari when the URL is same-origin or has Content-Disposition.
- */
-function triggerAnchorDownload(href: string, fileName: string, openInNewTab = false) {
-  const link = document.createElement("a");
-  link.href = href;
-  link.download = fileName;
-  if (openInNewTab) link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-/**
- * Save a Blob to disk. Uses anchor+blob URL for most browsers.
- * On Safari (which often ignores `download` on blob: URLs in iframes),
- * we open the blob in a new tab so the user can save it.
- */
-function saveBlobAsFile(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-
-  if (isSafari()) {
-    // Safari: open blob in new tab — user uses Cmd+S / share to save.
-    // This is the only reliable cross-iframe approach in Safari.
-    const win = window.open(url, "_blank");
-    if (!win) {
-      // Popup blocked — fallback to anchor click which may still navigate top.
-      triggerAnchorDownload(url, fileName);
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    return;
-  }
-
-  triggerAnchorDownload(url, fileName);
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-}
-
 export function getResourceDownloadName(r: ResourceRecord) {
   const base = getResourceBaseName(r);
   const ext = getResourceExtension(r);
@@ -112,82 +59,145 @@ export function getResourceDownloadName(r: ResourceRecord) {
 }
 
 /**
- * Get a signed URL with `download` param so Supabase serves
- * `Content-Disposition: attachment; filename=…`. Safari respects this
- * and saves the file directly without opening a tab.
+ * Save a Blob to disk via an anchor click on a same-origin blob: URL.
+ *
+ * Why this works in Safari (including inside the Lovable preview iframe):
+ * - The blob: URL is same-origin to the document, so the `download`
+ *   attribute is honoured (cross-origin URLs cause Safari to ignore it).
+ * - We trigger the click synchronously inside the user-gesture callback
+ *   that called us — no async gap between gesture and click.
+ *
+ * This is the approach used by Google Drive's web client for client-built ZIPs.
  */
-async function getSignedDownloadUrl(fileUrl: string, fileName: string): Promise<string | null> {
-  const path = extractStoragePath(fileUrl);
-  if (!path) return null;
-  const { data, error } = await supabase.storage
-    .from("resources")
-    .createSignedUrl(path, 3600, { download: fileName });
-  if (error) {
-    console.error("createSignedUrl(download) failed:", error);
-    return null;
-  }
-  return data.signedUrl;
+function saveBlobAsFile(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // Revoke after the browser has had time to start the download.
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
+/**
+ * Single-file download (Google Drive style):
+ * 1. Fetch the file as a Blob via the Supabase SDK (uses auth + RLS, same-origin to the SDK).
+ * 2. Save the Blob locally with a same-origin blob: URL — works in Safari.
+ *
+ * For external (non-storage) URLs we attempt a CORS fetch first; if that
+ * fails we fall back to opening the URL in a new tab.
+ */
 export async function downloadResourceFile(resource: ResourceRecord) {
   const source = getResourceSource(resource);
   if (!source) throw new Error("This resource has no file to download");
 
   const fileName = getResourceDownloadName(resource);
 
-  // Preferred path: storage file → use signed URL with `download` flag.
-  // The browser navigates to a same-server URL with Content-Disposition,
-  // so Safari saves directly without popup or tab.
-  if (resource.file_url) {
-    const signed = await getSignedDownloadUrl(resource.file_url, fileName);
-    if (signed) {
-      triggerAnchorDownload(signed, fileName);
+  // Storage file: download via the SDK directly into a blob.
+  const path = resource.file_url ? extractStoragePath(resource.file_url) : null;
+  if (path) {
+    const { data, error } = await supabase.storage.from("resources").download(path);
+    if (error || !data) {
+      throw new Error(error?.message || "Unable to download this file");
+    }
+    saveBlobAsFile(data, fileName);
+    return fileName;
+  }
+
+  // External URL: try fetching as blob; fall back to new tab.
+  if (resource.external_url) {
+    try {
+      const res = await fetch(resource.external_url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      saveBlobAsFile(blob, fileName);
+      return fileName;
+    } catch {
+      window.open(resource.external_url, "_blank", "noopener,noreferrer");
       return fileName;
     }
-  }
-
-  // External URL fallback: try a direct anchor download (works if CORS/headers allow).
-  if (resource.external_url) {
-    triggerAnchorDownload(resource.external_url, fileName, true);
-    return fileName;
-  }
-
-  // Last resort: fetch as blob and save.
-  const blob = await downloadResourceBlob(source);
-  if (blob) {
-    saveBlobAsFile(blob, fileName);
-    return fileName;
   }
 
   throw new Error("Unable to download this file");
 }
 
-export async function downloadResourcesAsZip(items: ZipDownloadItem[], zipName: string) {
-  const downloadItems = items.filter(({ resource }) => Boolean(getResourceSource(resource)));
-  if (downloadItems.length === 0) throw new Error("No downloadable files found");
+/**
+ * Bulk / folder download (Google Drive style):
+ * Calls the `zip-resources` edge function which streams files server-side
+ * and returns a ZIP. We then save the resulting Blob locally — same-origin
+ * blob URL means Safari saves it correctly.
+ */
+export async function downloadResourcesAsZip(
+  items: ZipDownloadItem[],
+  zipName: string,
+): Promise<{ downloaded: number; skipped: string[] }> {
+  // Filter to items that have a storage path (the edge function uses storage).
+  const payloadItems = items
+    .map(({ resource, folderName }) => {
+      const path = resource.file_url ? extractStoragePath(resource.file_url) : null;
+      if (!path) return null;
+      return {
+        path,
+        fileName: getResourceDownloadName(resource),
+        folderName: folderName ? sanitizeSegment(folderName, "folder") : undefined,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
 
-  const { default: JSZip } = await import("jszip");
-  const zip = new JSZip();
-  const used = new Set<string>();
-  const skipped: string[] = [];
-  let downloaded = 0;
+  const externallySkipped = items
+    .filter(({ resource }) => {
+      const path = resource.file_url ? extractStoragePath(resource.file_url) : null;
+      return !path;
+    })
+    .map(({ resource }) => resource.title || "Untitled");
 
-  for (const { resource, folderName } of downloadItems) {
-    const source = getResourceSource(resource);
-    if (!source) continue;
-    const blob = await downloadResourceBlob(source);
-    if (!blob) { skipped.push(resource.title || "Untitled"); continue; }
-    const prefix = folderName ? `${sanitizeSegment(folderName, "folder")}/` : "";
-    const path = buildUniquePath(`${prefix}${getResourceDownloadName(resource)}`, used);
-    zip.file(path, await blob.arrayBuffer());
-    downloaded++;
+  if (payloadItems.length === 0) {
+    throw new Error("No downloadable files found");
   }
 
-  if (downloaded === 0) throw new Error("No files could be downloaded");
+  const safeZipName = sanitizeSegment(zipName.replace(/\.zip$/i, ""), "resources");
 
-  const zipBlob = await zip.generateAsync({ type: "blob" });
-  const safeName = sanitizeSegment(zipName.replace(/\.zip$/i, ""), "download");
-  saveBlobAsFile(zipBlob, `${safeName}.zip`);
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("You must be signed in to download files");
+
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/zip-resources`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    },
+    body: JSON.stringify({ items: payloadItems, zipName: safeZipName }),
+  });
+
+  if (!res.ok) {
+    let message = "Unable to build the download";
+    try {
+      const err = await res.json();
+      if (err?.error) message = err.error;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  const downloaded = parseInt(res.headers.get("X-Files-Included") ?? "0", 10) || 0;
+  const skippedCount = parseInt(res.headers.get("X-Files-Skipped") ?? "0", 10) || 0;
+  const blob = await res.blob();
+
+  saveBlobAsFile(blob, `${safeZipName}.zip`);
+
+  // Combine server-side skips (count only) with client-side skips (with names).
+  const skipped = [
+    ...externallySkipped,
+    ...(skippedCount > 0 ? [`${skippedCount} server-side`] : []),
+  ];
 
   return { downloaded, skipped };
 }
