@@ -14,6 +14,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Expose-Headers":
+    "Content-Disposition, X-Files-Included, X-Files-Skipped",
 };
 
 interface ZipItem {
