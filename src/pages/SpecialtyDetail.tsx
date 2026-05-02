@@ -174,14 +174,14 @@ const SpecialtyDetail = () => {
         return;
       }
 
-      const { downloaded, skipped } = await downloadResourcesAsZip(
+      const { downloaded, skippedCount } = await downloadResourcesAsZip(
         filesToZip,
         `resources-${new Date().toISOString().slice(0, 10)}`,
       );
 
       toast.success(
-        skipped.length > 0
-          ? `${downloaded} file(s) downloaded, ${skipped.length} skipped`
+        skippedCount > 0
+          ? `${downloaded} file(s) downloaded, ${skippedCount} skipped`
           : `${downloaded} file(s) downloaded`,
       );
     } catch (e: any) {
