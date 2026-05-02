@@ -37,6 +37,28 @@ function splitFileName(fileName: string) {
   return { base: fileName.slice(0, i), extension: fileName.slice(i) };
 }
 
+function isSafariBrowser() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|EdgiOS|Edg\//i.test(ua);
+}
+
+function openDownloadWindow() {
+  if (!isSafariBrowser() || typeof window === "undefined") return null;
+
+  const popup = window.open("", "_blank");
+  if (!popup) return null;
+
+  try {
+    popup.document.title = "Preparing download…";
+    popup.document.body.innerHTML = "Preparing your download…";
+  } catch {
+    /* ignore */
+  }
+
+  return popup;
+}
+
 function getResourceSource(r: ResourceRecord) {
   return r.file_url || r.external_url || null;
 }
@@ -69,8 +91,30 @@ export function getResourceDownloadName(r: ResourceRecord) {
  *
  * This is the approach used by Google Drive's web client for client-built ZIPs.
  */
-function saveBlobAsFile(blob: Blob, fileName: string) {
+function saveBlobAsFile(blob: Blob, fileName: string, popup?: Window | null) {
   const url = URL.createObjectURL(blob);
+
+  if (popup && !popup.closed) {
+    try {
+      popup.location.href = url;
+      setTimeout(() => {
+        try {
+          if (!popup.closed) popup.close();
+        } catch {
+          /* ignore */
+        }
+      }, 1500);
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      return;
+    } catch {
+      try {
+        popup.close();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   const a = document.createElement("a");
   a.href = url;
   a.download = fileName;
@@ -134,7 +178,9 @@ export async function downloadResourceFile(resource: ResourceRecord) {
 export async function downloadResourcesAsZip(
   items: ZipDownloadItem[],
   zipName: string,
-): Promise<{ downloaded: number; skipped: string[] }> {
+): Promise<{ downloaded: number; skipped: string[]; skippedCount: number }> {
+  const popup = openDownloadWindow();
+
   // Filter to items that have a storage path (the edge function uses storage).
   const payloadItems = items
     .map(({ resource, folderName }) => {
@@ -156,6 +202,7 @@ export async function downloadResourcesAsZip(
     .map(({ resource }) => resource.title || "Untitled");
 
   if (payloadItems.length === 0) {
+    if (popup && !popup.closed) popup.close();
     throw new Error("No downloadable files found");
   }
 
@@ -163,7 +210,10 @@ export async function downloadResourcesAsZip(
 
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
-  if (!token) throw new Error("You must be signed in to download files");
+  if (!token) {
+    if (popup && !popup.closed) popup.close();
+    throw new Error("You must be signed in to download files");
+  }
 
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/zip-resources`;
   const res = await fetch(url, {
@@ -177,6 +227,7 @@ export async function downloadResourcesAsZip(
   });
 
   if (!res.ok) {
+    if (popup && !popup.closed) popup.close();
     let message = "Unable to build the download";
     try {
       const err = await res.json();
@@ -187,17 +238,17 @@ export async function downloadResourcesAsZip(
     throw new Error(message);
   }
 
-  const downloaded = parseInt(res.headers.get("X-Files-Included") ?? "0", 10) || 0;
+  const headerDownloaded = parseInt(res.headers.get("X-Files-Included") ?? "", 10);
   const skippedCount = parseInt(res.headers.get("X-Files-Skipped") ?? "0", 10) || 0;
+  const downloaded = Number.isFinite(headerDownloaded)
+    ? headerDownloaded
+    : Math.max(payloadItems.length - skippedCount, 0);
   const blob = await res.blob();
 
-  saveBlobAsFile(blob, `${safeZipName}.zip`);
+  saveBlobAsFile(blob, `${safeZipName}.zip`, popup);
 
   // Combine server-side skips (count only) with client-side skips (with names).
-  const skipped = [
-    ...externallySkipped,
-    ...(skippedCount > 0 ? [`${skippedCount} server-side`] : []),
-  ];
+  const skipped = [...externallySkipped];
 
-  return { downloaded, skipped };
+  return { downloaded, skipped, skippedCount: externallySkipped.length + skippedCount };
 }
