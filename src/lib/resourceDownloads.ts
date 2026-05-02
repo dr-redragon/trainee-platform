@@ -146,7 +146,7 @@ export async function downloadResourcesAsZip(
         folderName: folderName ? sanitizeSegment(folderName, "folder") : undefined,
       };
     })
-    .filter((x): x is { path: string; fileName: string; folderName?: string } => x !== null);
+    .filter((x): x is NonNullable<typeof x> => x !== null);
 
   const externallySkipped = items
     .filter(({ resource }) => {
