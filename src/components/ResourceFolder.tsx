@@ -69,14 +69,14 @@ export function ResourceFolder({
 
     setDownloading(true);
     try {
-      const { downloaded, skipped } = await downloadResourcesAsZip(
+      const { downloaded, skippedCount } = await downloadResourcesAsZip(
         resources.map((resource) => ({ resource })),
         folder.name,
       );
 
       toast.success(
-        skipped.length > 0
-          ? `${downloaded} file(s) downloaded, ${skipped.length} skipped`
+        skippedCount > 0
+          ? `${downloaded} file(s) downloaded, ${skippedCount} skipped`
           : `${downloaded} file(s) downloaded`,
       );
     } catch (e: any) {
