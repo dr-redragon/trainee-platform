@@ -188,11 +188,22 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
         <div className="space-y-4 pt-2">
           {/* Drag-and-drop zone */}
           <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (!dragOver) {
+                setDragOver(true);
+                setDragItemCount(e.dataTransfer.items?.length ?? 0);
+              }
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setDragOver(false);
+                setDragItemCount(0);
+              }
+            }}
+            onDrop={(e) => { setDragItemCount(0); handleDrop(e); }}
             onClick={() => fileRef.current?.click()}
-            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+            className={`relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
               dragOver ? "border-accent bg-accent/5" : file ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/40"
             }`}
           >
@@ -210,7 +221,9 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
                 <p className="text-xs text-muted-foreground/60 mt-1">Drop multiple files for bulk upload</p>
               </>
             )}
+            <FileDropOverlay active={dragOver} itemCount={dragItemCount} />
           </div>
+
 
           {uploading && uploadProgress.total > 0 && (
             <UploadProgressBar current={uploadProgress.current} total={uploadProgress.total} currentFileName={uploadProgress.fileName} />
