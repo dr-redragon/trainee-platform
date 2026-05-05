@@ -32,6 +32,7 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: "" });
   const [dragOver, setDragOver] = useState(false);
+  const [dragItemCount, setDragItemCount] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleDrop = (e: React.DragEvent) => {
