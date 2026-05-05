@@ -33,6 +33,7 @@ export function EditResourceDialog({ resource, open, onOpenChange, existingSubhe
   const [removeFile, setRemoveFile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [dragItemCount, setDragItemCount] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Fetch sibling subsections for the same specialty
