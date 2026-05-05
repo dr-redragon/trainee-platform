@@ -60,6 +60,7 @@ export function ResourceFolder({
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: "" });
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [dragItemCount, setDragItemCount] = useState(0);
   const [downloading, setDownloading] = useState(false);
 
   const handleDownloadFolder = async () => {
