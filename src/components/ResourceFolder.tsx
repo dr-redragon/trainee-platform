@@ -210,7 +210,18 @@ export function ResourceFolder({
           }}
           onDrop={handleDrop}
         >
-          <FileDropOverlay active={dragOver} itemCount={dragItemCount} compact label={`Drop into "${folder.name}"`} />
+          <FileDropOverlay
+            active={dragOver}
+            itemCount={dragItemCount}
+            compact
+            label={`Drop into "${folder.name}"`}
+          />
+          <FileDropOverlay
+            active={isOver && !dragOver}
+            compact
+            variant="move"
+            label={`Move into "${folder.name}"`}
+          />
           <CardContent className="p-0">
             <div className="flex items-center gap-2 px-3 py-2.5">
               {selectable && (
