@@ -140,11 +140,22 @@ export function EditResourceDialog({ resource, open, onOpenChange, existingSubhe
         <div className="space-y-4 pt-2">
           {/* File upload / replace zone */}
           <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (!dragOver) {
+                setDragOver(true);
+                setDragItemCount(e.dataTransfer.items?.length ?? 0);
+              }
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setDragOver(false);
+                setDragItemCount(0);
+              }
+            }}
+            onDrop={(e) => { setDragItemCount(0); handleDrop(e); }}
             onClick={() => fileRef.current?.click()}
-            className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+            className={`relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
               dragOver ? "border-accent bg-accent/5" : currentFile ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/40"
             }`}
           >
@@ -166,7 +177,9 @@ export function EditResourceDialog({ resource, open, onOpenChange, existingSubhe
                 <p className="text-sm text-muted-foreground">Drop a new file or click to replace</p>
               </>
             )}
+            <FileDropOverlay active={dragOver} itemCount={dragItemCount} compact label="Drop to replace" />
           </div>
+
 
           <div className="space-y-1.5">
             <Label>Title</Label>
