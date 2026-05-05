@@ -26,6 +26,7 @@ import {
 import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2, ListPlus, CheckSquare } from "lucide-react";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { UploadProgressBar } from "@/components/UploadProgressBar";
+import { FileDropOverlay } from "@/components/FileDropOverlay";
 
 import { toast } from "sonner";
 import { useCanManageSpecialty } from "@/hooks/useUserRole";
