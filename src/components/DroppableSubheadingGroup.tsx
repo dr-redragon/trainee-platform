@@ -2,6 +2,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { SubheadingGroup } from "@/components/SubheadingGroup";
 import { ResourceCard } from "@/components/ResourceCard";
+import { FileDropOverlay } from "@/components/FileDropOverlay";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface DroppableSubheadingGroupProps {
