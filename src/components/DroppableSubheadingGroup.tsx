@@ -97,23 +97,35 @@ export function DroppableUngrouped({
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[20px] rounded-md transition-colors ${isOver ? "bg-accent/10 ring-1 ring-accent/30" : ""}`}
+      className={`relative min-h-[20px] rounded-md transition-colors ${isOver ? "bg-accent/10" : ""}`}
     >
+      <FileDropOverlay
+        active={isOver && resources.length > 0}
+        compact
+        variant="move"
+        label="Move to ungrouped"
+      />
       <SortableContext items={resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-2">
-          {resources.map((r) => (
-            <ResourceCard
-              key={r.id}
-              resource={r}
-              canManage={canManage}
-              onDelete={onDelete}
-              existingSubheadings={existingSubheadings}
-              selectable={selectable}
-              selected={selectedIds?.has(r.id)}
-              onToggleSelect={onToggleSelect}
-            />
-          ))}
-        </div>
+        {resources.length === 0 && isOver ? (
+          <div className="flex items-center justify-center py-6 text-xs text-accent border border-dashed border-accent rounded-md bg-accent/5">
+            Drop here to move
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {resources.map((r) => (
+              <ResourceCard
+                key={r.id}
+                resource={r}
+                canManage={canManage}
+                onDelete={onDelete}
+                existingSubheadings={existingSubheadings}
+                selectable={selectable}
+                selected={selectedIds?.has(r.id)}
+                onToggleSelect={onToggleSelect}
+              />
+            ))}
+          </div>
+        )}
       </SortableContext>
     </div>
   );
