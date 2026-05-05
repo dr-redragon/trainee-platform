@@ -63,6 +63,7 @@ const SpecialtyDetail = () => {
   const [manualSubheadings, setManualSubheadings] = useState<Record<string, string[]>>({});
   const [moveTargetId, setMoveTargetId] = useState<string>("");
   const [nativeDropSub, setNativeDropSub] = useState<string | null>(null);
+  const [nativeDropItemCount, setNativeDropItemCount] = useState(0);
   const [nativeDropUploading, setNativeDropUploading] = useState(false);
   const [nativeUploadProgress, setNativeUploadProgress] = useState({ current: 0, total: 0, fileName: "" });
   const [selectMode, setSelectMode] = useState(false);
