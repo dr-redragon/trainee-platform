@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Upload, FileUp } from "lucide-react";
 import { toast } from "sonner";
 import { UploadProgressBar } from "@/components/UploadProgressBar";
+import { FileDropOverlay } from "@/components/FileDropOverlay";
 import { Constants } from "@/integrations/supabase/types";
 
 interface AddResourceDialogProps {
