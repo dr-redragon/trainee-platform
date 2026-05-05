@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { ResourceCard } from "@/components/ResourceCard";
 import { UploadProgressBar } from "@/components/UploadProgressBar";
+import { FileDropOverlay } from "@/components/FileDropOverlay";
 import { downloadResourcesAsZip } from "@/lib/resourceDownloads";
 import type { Tables } from "@/integrations/supabase/types";
 
