@@ -38,12 +38,18 @@ export function DroppableSubheadingGroup({
     >
       <div
         ref={setNodeRef}
-        className={`min-h-[40px] rounded-md transition-colors ${isOver ? "bg-accent/10 ring-1 ring-accent/30" : ""}`}
+        className={`relative min-h-[40px] rounded-md transition-colors ${isOver ? "bg-accent/10" : ""}`}
       >
+        <FileDropOverlay
+          active={isOver && resources.length > 0}
+          compact
+          variant="move"
+          label={name ? `Move into "${name}"` : "Move here"}
+        />
         <SortableContext items={resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
           {resources.length === 0 ? (
-            <div className="flex items-center justify-center py-6 text-xs text-muted-foreground border border-dashed rounded-md">
-              {isOver ? "Drop here" : "No resources yet — drag here or use \"Add Resource\""}
+            <div className={`flex items-center justify-center py-6 text-xs border border-dashed rounded-md transition-colors ${isOver ? "border-accent text-accent bg-accent/5" : "text-muted-foreground"}`}>
+              {isOver ? "Drop here to move" : "No resources yet — drag here or use \"Add Resource\""}
             </div>
           ) : (
             <div className="space-y-2">
