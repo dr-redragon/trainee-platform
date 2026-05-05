@@ -673,11 +673,31 @@ const SpecialtyDetail = () => {
               <TabsContent
                 key={sub.id}
                 value={sub.name}
-                className={`mt-4 space-y-3 rounded-lg transition-colors ${nativeDropSub === sub.id ? "ring-2 ring-accent/40 bg-accent/5" : ""}`}
-                onDragOver={(e) => { e.preventDefault(); setNativeDropSub(sub.id); }}
-                onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setNativeDropSub(null); }}
-                onDrop={(e) => { if (e.dataTransfer.files.length > 0) handleNativeFileDrop(e, sub.id); }}
+                className={`relative mt-4 space-y-3 rounded-lg p-2 -m-2 transition-colors ${nativeDropSub === sub.id ? "bg-accent/5" : ""}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (nativeDropSub !== sub.id) {
+                    setNativeDropSub(sub.id);
+                    setNativeDropItemCount(e.dataTransfer.items?.length ?? 0);
+                  }
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setNativeDropSub(null);
+                    setNativeDropItemCount(0);
+                  }
+                }}
+                onDrop={(e) => {
+                  setNativeDropItemCount(0);
+                  if (e.dataTransfer.files.length > 0) handleNativeFileDrop(e, sub.id);
+                }}
               >
+                <FileDropOverlay
+                  active={nativeDropSub === sub.id}
+                  itemCount={nativeDropItemCount}
+                  label={`Drop into ${sub.name}`}
+                />
+
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-sm">{sub.name}</h3>
                   <div className="flex items-center gap-1">
