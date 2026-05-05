@@ -183,6 +183,7 @@ export function ResourceFolder({
     e.preventDefault();
     e.stopPropagation();
     setDragOver(false);
+    setDragItemCount(0);
     if (e.dataTransfer.items.length > 0 || e.dataTransfer.files.length > 0) {
       handleBulkUpload(e.dataTransfer);
     }
@@ -193,11 +194,23 @@ export function ResourceFolder({
       <Collapsible open={open || isOver} onOpenChange={setOpen}>
         <Card
           ref={setDropRef}
-          className={`transition-colors ${isOver ? "ring-2 ring-accent/40 bg-accent/5" : dragOver ? "ring-2 ring-accent/40 bg-accent/5" : ""}`}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
+          className={`relative transition-colors ${isOver ? "ring-2 ring-accent/40 bg-accent/5" : dragOver ? "ring-2 ring-accent bg-accent/5" : ""}`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!dragOver) {
+              setDragOver(true);
+              setDragItemCount(e.dataTransfer.items?.length ?? 0);
+            }
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setDragOver(false);
+              setDragItemCount(0);
+            }
+          }}
           onDrop={handleDrop}
         >
+          <FileDropOverlay active={dragOver} itemCount={dragItemCount} compact label={`Drop into "${folder.name}"`} />
           <CardContent className="p-0">
             <div className="flex items-center gap-2 px-3 py-2.5">
               {selectable && (
