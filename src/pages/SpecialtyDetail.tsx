@@ -497,95 +497,113 @@ const SpecialtyDetail = () => {
     reorderSubsections.mutate(updates);
   };
 
-  const updateResourceSubheading = useMutation({
-    mutationFn: async ({ resourceId, subheading, folderId }: { resourceId: string; subheading: string | null; folderId?: string | null }) => {
-      const updateData: any = { subheading };
-      if (folderId !== undefined) updateData.folder_id = folderId;
-      const { error } = await supabase
-        .from("resources")
-        .update(updateData)
-        .eq("id", resourceId);
+  const updateResourcePlacement = useMutation({
+    mutationFn: async ({
+      resourceId,
+      subheading,
+      folderId,
+      sortOrder,
+    }: {
+      resourceId: string;
+      subheading: string | null;
+      folderId: string | null;
+      sortOrder?: number;
+    }) => {
+      const updateData: any = { subheading, folder_id: folderId };
+      if (sortOrder !== undefined) updateData.sort_order = sortOrder;
+      const { error } = await supabase.from("resources").update(updateData).eq("id", resourceId);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["resources"] }),
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleCrossGroupDragEnd = (event: DragEndEvent, subResources: Tables<"resources">[], allSubheadings: string[]) => {
+  const resolveDropTargetId = (overId: string | null, subResources: Tables<"resources">[]) => {
+    if (!overId) return null;
+    if (overId.startsWith("folder:") || overId.startsWith("group:")) return overId;
+    const overResource = subResources.find((resource) => resource.id === overId);
+    return overResource ? getResourceDropId(overResource) : null;
+  };
+
+  const resetResourceDrag = () => {
+    setActiveDragResourceId(null);
+    setActiveDragTargetId(null);
+  };
+
+  const handleResourceDragStart = (event: DragStartEvent) => {
+    if (event.active.data.current?.type !== "resource") return;
+    setActiveDragResourceId(String(event.active.id));
+    setActiveDragTargetId((event.active.data.current?.containerId as string | null) ?? null);
+  };
+
+  const handleResourceDragOver = (event: DragOverEvent, subResources: Tables<"resources">[]) => {
+    if (event.active.data.current?.type !== "resource") return;
+    setActiveDragTargetId(resolveDropTargetId(event.over ? String(event.over.id) : null, subResources));
+  };
+
+  const handleCrossGroupDragEnd = (event: DragEndEvent, subResources: Tables<"resources">[]) => {
     const { active, over } = event;
-    if (!over) return;
+    const activeId = String(active.id);
+    const activeResource = subResources.find((resource) => resource.id === activeId);
+    const overId = over ? String(over.id) : null;
+    const targetContainerId = resolveDropTargetId(overId, subResources);
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
+    resetResourceDrag();
 
-    const activeResource = subResources.find((r) => r.id === activeId);
-    if (!activeResource) return;
+    if (!activeResource || !targetContainerId) return;
 
-    // Handle drop onto a folder
-    if (overId.startsWith("folder:")) {
-      const targetFolderId = overId.replace("folder:", "");
-      const targetFolder = (resourceFolders ?? []).find((f: any) => f.id === targetFolderId);
-      if (!targetFolder) return;
-      // Optimistic update
+    const sourceContainerId = getResourceDropId(activeResource);
+    const targetFolderId = targetContainerId.startsWith("folder:") ? targetContainerId.replace("folder:", "") : null;
+    const targetFolder = targetFolderId
+      ? (resourceFolders ?? []).find((folder: any) => folder.id === targetFolderId)
+      : null;
+    const targetSubheading = targetFolder
+      ? ((targetFolder as any).subheading ?? null)
+      : targetContainerId === UNGROUPED_DROP_ID
+        ? null
+        : targetContainerId.replace("group:", "");
+
+    if (sourceContainerId !== targetContainerId) {
+      const nextSortOrder = subResources.filter((resource) => getResourceDropId(resource) === targetContainerId).length;
       queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
         if (!old) return old;
-        return old.map((r) =>
-          r.id === activeId ? { ...r, folder_id: targetFolderId, subheading: (targetFolder as any).subheading || null } : r
+        return old.map((resource) =>
+          resource.id === activeId
+            ? { ...resource, folder_id: targetFolderId, subheading: targetSubheading, sort_order: nextSortOrder }
+            : resource
         );
       });
-      updateResourceSubheading.mutate({
+      updateResourcePlacement.mutate({
         resourceId: activeId,
-        subheading: (targetFolder as any).subheading || null,
+        subheading: targetSubheading,
         folderId: targetFolderId,
+        sortOrder: nextSortOrder,
       });
       return;
     }
 
-    // Determine target group from the over element
-    let targetSubheading: string | null = null;
-    let isGroupDrop = false;
+    if (!overId || overId === activeId || overId.startsWith("folder:") || overId.startsWith("group:")) return;
 
-    if (overId.startsWith("group:")) {
-      isGroupDrop = true;
-      const groupKey = overId.replace("group:", "");
-      targetSubheading = groupKey === "__ungrouped__" ? null : groupKey;
-    } else {
-      const overResource = subResources.find((r) => r.id === overId);
-      if (overResource) {
-        targetSubheading = (overResource as any).subheading || null;
-      }
-    }
-
-    const activeSubheading: string | null = (activeResource as any).subheading || null;
-    const activeFolderId: string | null = (activeResource as any).folder_id || null;
-
-    // If moving between groups or out of a folder, update
-    if (activeSubheading !== targetSubheading || activeFolderId) {
-      queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
-        if (!old) return old;
-        return old.map((r) =>
-          r.id === activeId ? { ...r, subheading: targetSubheading, folder_id: null } : r
-        );
-      });
-      updateResourceSubheading.mutate({ resourceId: activeId, subheading: targetSubheading, folderId: null });
-      return;
-    }
-
-    // Same group reorder
-    if (activeId === overId || isGroupDrop) return;
-    const groupResources = subResources
-      .filter((r) => ((r as any).subheading || null) === targetSubheading && !(r as any).folder_id)
+    const containerResources = subResources
+      .filter((resource) => getResourceDropId(resource) === sourceContainerId)
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-    const oldIndex = groupResources.findIndex((r) => r.id === activeId);
-    const newIndex = groupResources.findIndex((r) => r.id === overId);
+    const oldIndex = containerResources.findIndex((resource) => resource.id === activeId);
+    const newIndex = containerResources.findIndex((resource) => resource.id === overId);
     if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(groupResources, oldIndex, newIndex);
-    const updates = reordered.map((r, i) => ({ id: r.id, sort_order: i }));
+
+    const reordered = arrayMove(containerResources, oldIndex, newIndex);
+    const updates = reordered.map((resource, index) => ({ id: resource.id, sort_order: index }));
+
     queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
       if (!old) return old;
-      const otherResources = old.filter((r) => !reordered.some((rr) => rr.id === r.id));
-      return [...otherResources, ...reordered.map((r, i) => ({ ...r, sort_order: i }))];
+      const reorderMap = new Map(reordered.map((resource, index) => [resource.id, index]));
+      return old.map((resource) =>
+        reorderMap.has(resource.id)
+          ? { ...resource, sort_order: reorderMap.get(resource.id) ?? resource.sort_order }
+          : resource
+      );
     });
+
     reorderResources.mutate(updates);
   };
 
