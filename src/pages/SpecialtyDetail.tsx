@@ -822,8 +822,11 @@ const SpecialtyDetail = () => {
                 ) : (
                   <DndContext
                     sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={(e) => handleCrossGroupDragEnd(e, subResources, allSubheadings)}
+                    collisionDetection={resourceCollisionDetection}
+                    onDragStart={handleResourceDragStart}
+                    onDragOver={(e) => handleResourceDragOver(e, subResources)}
+                    onDragEnd={(e) => handleCrossGroupDragEnd(e, subResources)}
+                    onDragCancel={resetResourceDrag}
                   >
                     <div className="space-y-4">
                       {(ungrouped.length > 0 || ungroupedFolders.length > 0 || canManage) && (
@@ -836,6 +839,7 @@ const SpecialtyDetail = () => {
                             selectable={selectMode}
                             selectedIds={selectedResourceIds}
                             onToggleSelect={toggleSelectResource}
+                            activeDropTargetId={activeDragTargetId}
                           />
                           {ungroupedFolders.map((f: any) => (
                             <ResourceFolder
@@ -851,6 +855,7 @@ const SpecialtyDetail = () => {
                               selectedFolderIds={selectedFolderIds}
                               onToggleSelect={toggleSelectResource}
                               onToggleFolderSelect={toggleSelectFolder}
+                              activeDropTargetId={activeDragTargetId}
                             />
                           ))}
                         </>
@@ -868,6 +873,7 @@ const SpecialtyDetail = () => {
                             selectable={selectMode}
                             selectedIds={selectedResourceIds}
                             onToggleSelect={toggleSelectResource}
+                            activeDropTargetId={activeDragTargetId}
                           />
                           {group.folders.map((f: any) => (
                             <ResourceFolder
@@ -883,11 +889,26 @@ const SpecialtyDetail = () => {
                               selectedFolderIds={selectedFolderIds}
                               onToggleSelect={toggleSelectResource}
                               onToggleFolderSelect={toggleSelectFolder}
+                              activeDropTargetId={activeDragTargetId}
                             />
                           ))}
                         </div>
                       ))}
                     </div>
+                    <DragOverlay dropAnimation={null}>
+                      {activeDragResourceId ? (
+                        <div className="pointer-events-none fixed left-0 top-0 z-50">
+                          <ResourceDragPreview
+                            resource={subResources.find((resource) => resource.id === activeDragResourceId) ?? subResources[0]}
+                          />
+                          {getDropLabel(activeDragTargetId, resourceFolders) ? (
+                            <div className="mt-2 inline-flex items-center rounded-md border border-accent/30 bg-card/95 px-3 py-1 text-xs font-medium text-accent shadow-lg backdrop-blur-sm">
+                              {getDropLabel(activeDragTargetId, resourceFolders)}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </DragOverlay>
                   </DndContext>
                 )}
               </TabsContent>
