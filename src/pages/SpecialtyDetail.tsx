@@ -10,6 +10,7 @@ import { DroppableSubheadingGroup, DroppableUngrouped } from "@/components/Dropp
 import { AddResourceDialog } from "@/components/AddResourceDialog";
 import { AddFolderDialog } from "@/components/AddFolderDialog";
 import { ResourceFolder } from "@/components/ResourceFolder";
+import { ResourceDragPreview } from "@/components/ResourceCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,13 +33,32 @@ import { toast } from "sonner";
 import { useCanManageSpecialty } from "@/hooks/useUserRole";
 import { getIcon } from "@/lib/iconMap";
 import {
-  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
-  type DragEndEvent,
+  DndContext, DragOverlay, closestCenter, KeyboardSensor, PointerSensor, pointerWithin,
+  rectIntersection, useSensor, useSensors, type CollisionDetection, type DragEndEvent,
+  type DragOverEvent, type DragStartEvent,
 } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { SortableTabTrigger } from "@/components/SortableTabTrigger";
 import type { Tables } from "@/integrations/supabase/types";
 import { downloadResourcesAsZip } from "@/lib/resourceDownloads";
+
+const UNGROUPED_DROP_ID = "group:__ungrouped__";
+
+const getGroupDropId = (subheading: string | null | undefined) =>
+  subheading ? `group:${subheading}` : UNGROUPED_DROP_ID;
+
+const getResourceDropId = (resource: Tables<"resources">) => {
+  const folderId = (resource as any).folder_id as string | null;
+  const subheading = (resource as any).subheading as string | null;
+
+  return folderId ? `folder:${folderId}` : getGroupDropId(subheading);
+};
+
+const resourceCollisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) return pointerCollisions;
+  return rectIntersection(args);
+};
 
 const SpecialtyDetail = () => {
   const { id } = useParams<{ id: string }>();
