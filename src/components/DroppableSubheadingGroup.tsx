@@ -15,6 +15,7 @@ interface DroppableSubheadingGroupProps {
   selectable?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  activeDropTargetId?: string | null;
 }
 
 export function DroppableSubheadingGroup({
@@ -27,9 +28,11 @@ export function DroppableSubheadingGroup({
   selectable,
   selectedIds,
   onToggleSelect,
+  activeDropTargetId,
 }: DroppableSubheadingGroupProps) {
   const { setNodeRef, isOver } = useDroppable({ id: `group:${groupId}` });
   const containerId = `group:${groupId}`;
+  const isActiveDropTarget = activeDropTargetId === containerId;
 
   return (
     <SubheadingGroup
@@ -39,10 +42,10 @@ export function DroppableSubheadingGroup({
     >
       <div
         ref={setNodeRef}
-        className={`relative min-h-[40px] rounded-md transition-colors ${isOver ? "bg-accent/10" : ""}`}
+        className={`relative min-h-[40px] rounded-md transition-colors ${isOver || isActiveDropTarget ? "bg-accent/10" : ""}`}
       >
         <FileDropOverlay
-          active={isOver && resources.length > 0}
+          active={(isOver || isActiveDropTarget) && resources.length > 0}
           compact
           variant="move"
           label={name ? `Move into "${name}"` : "Move here"}
@@ -83,6 +86,7 @@ interface DroppableUngroupedProps {
   selectable?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
+  activeDropTargetId?: string | null;
 }
 
 export function DroppableUngrouped({
@@ -93,23 +97,25 @@ export function DroppableUngrouped({
   selectable,
   selectedIds,
   onToggleSelect,
+  activeDropTargetId,
 }: DroppableUngroupedProps) {
   const { setNodeRef, isOver } = useDroppable({ id: "group:__ungrouped__" });
   const containerId = "group:__ungrouped__";
+  const isActiveDropTarget = activeDropTargetId === containerId;
 
   return (
     <div
       ref={setNodeRef}
-      className={`relative min-h-[20px] rounded-md transition-colors ${isOver ? "bg-accent/10" : ""}`}
+      className={`relative min-h-[20px] rounded-md transition-colors ${isOver || isActiveDropTarget ? "bg-accent/10" : ""}`}
     >
       <FileDropOverlay
-        active={isOver && resources.length > 0}
+        active={(isOver || isActiveDropTarget) && resources.length > 0}
         compact
         variant="move"
         label="Move to ungrouped"
       />
       <SortableContext items={resources.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-        {resources.length === 0 && isOver ? (
+        {resources.length === 0 && (isOver || isActiveDropTarget) ? (
           <div className="flex items-center justify-center py-6 text-xs text-accent border border-dashed border-accent rounded-md bg-accent/5">
             Drop here to move
           </div>
