@@ -35,6 +35,7 @@ interface ResourceFolderProps {
   selectedFolderIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   onToggleFolderSelect?: (folderId: string, resourceIds: string[]) => void;
+  activeDropTargetId?: string | null;
 }
 
 export function ResourceFolder({
@@ -49,9 +50,12 @@ export function ResourceFolder({
   selectedFolderIds,
   onToggleSelect,
   onToggleFolderSelect,
+  activeDropTargetId,
 }: ResourceFolderProps) {
   const queryClient = useQueryClient();
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `folder:${folder.id}` });
+  const folderDropId = `folder:${folder.id}`;
+  const isActiveDropTarget = activeDropTargetId === folderDropId;
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(folder.name);
@@ -194,7 +198,7 @@ export function ResourceFolder({
       <Collapsible open={open || isOver} onOpenChange={setOpen}>
         <Card
           ref={setDropRef}
-          className={`relative transition-colors ${isOver ? "ring-2 ring-accent/40 bg-accent/5" : dragOver ? "ring-2 ring-accent bg-accent/5" : ""}`}
+          className={`relative transition-colors ${isActiveDropTarget || isOver ? "ring-2 ring-accent/40 bg-accent/5" : dragOver ? "ring-2 ring-accent bg-accent/5" : ""}`}
           onDragOver={(e) => {
             e.preventDefault();
             if (!dragOver) {
@@ -217,7 +221,7 @@ export function ResourceFolder({
             label={`Drop into "${folder.name}"`}
           />
           <FileDropOverlay
-            active={isOver && !dragOver}
+            active={isActiveDropTarget && !dragOver}
             compact
             variant="move"
             label={`Move into "${folder.name}"`}
@@ -336,6 +340,7 @@ export function ResourceFolder({
                     <ResourceCard
                       key={r.id}
                       resource={r}
+                      containerId={folderDropId}
                       canManage={canManage}
                       onDelete={onDeleteResource}
                       existingSubheadings={existingSubheadings}

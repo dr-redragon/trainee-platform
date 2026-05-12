@@ -41,21 +41,30 @@ interface ResourceCardProps {
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
+  containerId?: string;
 }
 
-export function ResourceCard({ resource, canManage, onDelete, existingSubheadings = [], selectable, selected, onToggleSelect }: ResourceCardProps) {
+export function ResourceCard({ resource, canManage, onDelete, existingSubheadings = [], selectable, selected, onToggleSelect, containerId }: ResourceCardProps) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const { data: user } = useCurrentUser();
   const queryClient = useQueryClient();
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: resource.id, disabled: !canManage });
+    useSortable({
+      id: resource.id,
+      disabled: !canManage || !!selectable,
+      data: {
+        type: "resource",
+        resourceId: resource.id,
+        containerId,
+      },
+    });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.15 : 1,
   };
 
   const Icon = typeIcons[resource.resource_type] || FileText;
@@ -101,7 +110,7 @@ export function ResourceCard({ resource, canManage, onDelete, existingSubheading
     <>
       <div ref={setNodeRef} style={style}>
         <Card
-          className={`transition-shadow cursor-pointer ${selected ? "ring-2 ring-accent/50 bg-accent/5" : ""} ${isDragging ? "shadow-lg ring-2 ring-accent/30" : "hover:shadow-sm hover:border-accent/30"}`}
+          className={`cursor-pointer transition-all ${selected ? "ring-2 ring-accent/50 bg-accent/5" : ""} ${isDragging ? "scale-[0.985] shadow-xl ring-2 ring-accent/40" : "hover:shadow-sm hover:border-accent/30"}`}
           onClick={() => selectable ? onToggleSelect?.(resource.id) : setViewerOpen(true)}
         >
           <CardContent className="flex items-center gap-3 p-3">
@@ -181,5 +190,30 @@ export function ResourceCard({ resource, canManage, onDelete, existingSubheading
       <ResourceViewer resource={resource} open={viewerOpen} onOpenChange={setViewerOpen} />
       {canManage && <EditResourceDialog resource={resource} open={editOpen} onOpenChange={setEditOpen} existingSubheadings={existingSubheadings} />}
     </>
+  );
+}
+
+export function ResourceDragPreview({ resource }: { resource: Tables<"resources"> }) {
+  const Icon = typeIcons[resource.resource_type] || FileText;
+
+  return (
+    <div className="w-[min(34rem,calc(100vw-2rem))] rotate-[1.5deg]">
+      <Card className="border-accent/40 bg-card shadow-2xl ring-2 ring-accent/20">
+        <CardContent className="flex items-center gap-3 p-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="truncate text-sm font-medium">{resource.title}</h4>
+            <p className="truncate text-xs text-muted-foreground">
+              Dragging resource
+            </p>
+          </div>
+          <Badge variant="secondary" className="shrink-0 text-[10px]">
+            {resource.resource_type.toUpperCase()}
+          </Badge>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

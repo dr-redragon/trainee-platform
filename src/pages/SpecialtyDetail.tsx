@@ -10,6 +10,7 @@ import { DroppableSubheadingGroup, DroppableUngrouped } from "@/components/Dropp
 import { AddResourceDialog } from "@/components/AddResourceDialog";
 import { AddFolderDialog } from "@/components/AddFolderDialog";
 import { ResourceFolder } from "@/components/ResourceFolder";
+import { ResourceDragPreview } from "@/components/ResourceCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,13 +33,32 @@ import { toast } from "sonner";
 import { useCanManageSpecialty } from "@/hooks/useUserRole";
 import { getIcon } from "@/lib/iconMap";
 import {
-  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
-  type DragEndEvent,
+  DndContext, DragOverlay, closestCenter, KeyboardSensor, PointerSensor, pointerWithin,
+  rectIntersection, useSensor, useSensors, type CollisionDetection, type DragEndEvent,
+  type DragOverEvent, type DragStartEvent,
 } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { SortableTabTrigger } from "@/components/SortableTabTrigger";
 import type { Tables } from "@/integrations/supabase/types";
 import { downloadResourcesAsZip } from "@/lib/resourceDownloads";
+
+const UNGROUPED_DROP_ID = "group:__ungrouped__";
+
+const getGroupDropId = (subheading: string | null | undefined) =>
+  subheading ? `group:${subheading}` : UNGROUPED_DROP_ID;
+
+const getResourceDropId = (resource: Tables<"resources">) => {
+  const folderId = (resource as any).folder_id as string | null;
+  const subheading = (resource as any).subheading as string | null;
+
+  return folderId ? `folder:${folderId}` : getGroupDropId(subheading);
+};
+
+const resourceCollisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) return pointerCollisions;
+  return rectIntersection(args);
+};
 
 const SpecialtyDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -71,6 +91,8 @@ const SpecialtyDetail = () => {
   const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [activeDragResourceId, setActiveDragResourceId] = useState<string | null>(null);
+  const [activeDragTargetId, setActiveDragTargetId] = useState<string | null>(null);
 
   const toggleSelectResource = (id: string) => {
     setSelectedResourceIds((prev) => {
@@ -109,6 +131,17 @@ const SpecialtyDetail = () => {
     setSelectMode(false);
     setSelectedResourceIds(new Set());
     setSelectedFolderIds(new Set());
+  };
+
+  const getDropLabel = (targetId: string | null, folders: Tables<"resource_folders">[] | undefined) => {
+    if (!targetId) return null;
+    if (targetId.startsWith("folder:")) {
+      const folder = folders?.find((item) => item.id === targetId.replace("folder:", ""));
+      return folder ? `Move into ${folder.name}` : "Move into folder";
+    }
+    if (targetId === UNGROUPED_DROP_ID) return "Move to ungrouped";
+    if (targetId.startsWith("group:")) return `Move into ${targetId.replace("group:", "")}`;
+    return null;
   };
 
   const handleBulkDelete = async () => {
@@ -464,95 +497,113 @@ const SpecialtyDetail = () => {
     reorderSubsections.mutate(updates);
   };
 
-  const updateResourceSubheading = useMutation({
-    mutationFn: async ({ resourceId, subheading, folderId }: { resourceId: string; subheading: string | null; folderId?: string | null }) => {
-      const updateData: any = { subheading };
-      if (folderId !== undefined) updateData.folder_id = folderId;
-      const { error } = await supabase
-        .from("resources")
-        .update(updateData)
-        .eq("id", resourceId);
+  const updateResourcePlacement = useMutation({
+    mutationFn: async ({
+      resourceId,
+      subheading,
+      folderId,
+      sortOrder,
+    }: {
+      resourceId: string;
+      subheading: string | null;
+      folderId: string | null;
+      sortOrder?: number;
+    }) => {
+      const updateData: any = { subheading, folder_id: folderId };
+      if (sortOrder !== undefined) updateData.sort_order = sortOrder;
+      const { error } = await supabase.from("resources").update(updateData).eq("id", resourceId);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["resources"] }),
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const handleCrossGroupDragEnd = (event: DragEndEvent, subResources: Tables<"resources">[], allSubheadings: string[]) => {
+  const resolveDropTargetId = (overId: string | null, subResources: Tables<"resources">[]) => {
+    if (!overId) return null;
+    if (overId.startsWith("folder:") || overId.startsWith("group:")) return overId;
+    const overResource = subResources.find((resource) => resource.id === overId);
+    return overResource ? getResourceDropId(overResource) : null;
+  };
+
+  const resetResourceDrag = () => {
+    setActiveDragResourceId(null);
+    setActiveDragTargetId(null);
+  };
+
+  const handleResourceDragStart = (event: DragStartEvent) => {
+    if (event.active.data.current?.type !== "resource") return;
+    setActiveDragResourceId(String(event.active.id));
+    setActiveDragTargetId((event.active.data.current?.containerId as string | null) ?? null);
+  };
+
+  const handleResourceDragOver = (event: DragOverEvent, subResources: Tables<"resources">[]) => {
+    if (event.active.data.current?.type !== "resource") return;
+    setActiveDragTargetId(resolveDropTargetId(event.over ? String(event.over.id) : null, subResources));
+  };
+
+  const handleCrossGroupDragEnd = (event: DragEndEvent, subResources: Tables<"resources">[]) => {
     const { active, over } = event;
-    if (!over) return;
+    const activeId = String(active.id);
+    const activeResource = subResources.find((resource) => resource.id === activeId);
+    const overId = over ? String(over.id) : null;
+    const targetContainerId = resolveDropTargetId(overId, subResources);
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
+    resetResourceDrag();
 
-    const activeResource = subResources.find((r) => r.id === activeId);
-    if (!activeResource) return;
+    if (!activeResource || !targetContainerId) return;
 
-    // Handle drop onto a folder
-    if (overId.startsWith("folder:")) {
-      const targetFolderId = overId.replace("folder:", "");
-      const targetFolder = (resourceFolders ?? []).find((f: any) => f.id === targetFolderId);
-      if (!targetFolder) return;
-      // Optimistic update
+    const sourceContainerId = getResourceDropId(activeResource);
+    const targetFolderId = targetContainerId.startsWith("folder:") ? targetContainerId.replace("folder:", "") : null;
+    const targetFolder = targetFolderId
+      ? (resourceFolders ?? []).find((folder: any) => folder.id === targetFolderId)
+      : null;
+    const targetSubheading = targetFolder
+      ? ((targetFolder as any).subheading ?? null)
+      : targetContainerId === UNGROUPED_DROP_ID
+        ? null
+        : targetContainerId.replace("group:", "");
+
+    if (sourceContainerId !== targetContainerId) {
+      const nextSortOrder = subResources.filter((resource) => getResourceDropId(resource) === targetContainerId).length;
       queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
         if (!old) return old;
-        return old.map((r) =>
-          r.id === activeId ? { ...r, folder_id: targetFolderId, subheading: (targetFolder as any).subheading || null } : r
+        return old.map((resource) =>
+          resource.id === activeId
+            ? { ...resource, folder_id: targetFolderId, subheading: targetSubheading, sort_order: nextSortOrder }
+            : resource
         );
       });
-      updateResourceSubheading.mutate({
+      updateResourcePlacement.mutate({
         resourceId: activeId,
-        subheading: (targetFolder as any).subheading || null,
+        subheading: targetSubheading,
         folderId: targetFolderId,
+        sortOrder: nextSortOrder,
       });
       return;
     }
 
-    // Determine target group from the over element
-    let targetSubheading: string | null = null;
-    let isGroupDrop = false;
+    if (!overId || overId === activeId || overId.startsWith("folder:") || overId.startsWith("group:")) return;
 
-    if (overId.startsWith("group:")) {
-      isGroupDrop = true;
-      const groupKey = overId.replace("group:", "");
-      targetSubheading = groupKey === "__ungrouped__" ? null : groupKey;
-    } else {
-      const overResource = subResources.find((r) => r.id === overId);
-      if (overResource) {
-        targetSubheading = (overResource as any).subheading || null;
-      }
-    }
-
-    const activeSubheading: string | null = (activeResource as any).subheading || null;
-    const activeFolderId: string | null = (activeResource as any).folder_id || null;
-
-    // If moving between groups or out of a folder, update
-    if (activeSubheading !== targetSubheading || activeFolderId) {
-      queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
-        if (!old) return old;
-        return old.map((r) =>
-          r.id === activeId ? { ...r, subheading: targetSubheading, folder_id: null } : r
-        );
-      });
-      updateResourceSubheading.mutate({ resourceId: activeId, subheading: targetSubheading, folderId: null });
-      return;
-    }
-
-    // Same group reorder
-    if (activeId === overId || isGroupDrop) return;
-    const groupResources = subResources
-      .filter((r) => ((r as any).subheading || null) === targetSubheading && !(r as any).folder_id)
+    const containerResources = subResources
+      .filter((resource) => getResourceDropId(resource) === sourceContainerId)
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-    const oldIndex = groupResources.findIndex((r) => r.id === activeId);
-    const newIndex = groupResources.findIndex((r) => r.id === overId);
+    const oldIndex = containerResources.findIndex((resource) => resource.id === activeId);
+    const newIndex = containerResources.findIndex((resource) => resource.id === overId);
     if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(groupResources, oldIndex, newIndex);
-    const updates = reordered.map((r, i) => ({ id: r.id, sort_order: i }));
+
+    const reordered = arrayMove(containerResources, oldIndex, newIndex);
+    const updates = reordered.map((resource, index) => ({ id: resource.id, sort_order: index }));
+
     queryClient.setQueryData(["resources", id, subsectionIds], (old: Tables<"resources">[] | undefined) => {
       if (!old) return old;
-      const otherResources = old.filter((r) => !reordered.some((rr) => rr.id === r.id));
-      return [...otherResources, ...reordered.map((r, i) => ({ ...r, sort_order: i }))];
+      const reorderMap = new Map(reordered.map((resource, index) => [resource.id, index]));
+      return old.map((resource) =>
+        reorderMap.has(resource.id)
+          ? { ...resource, sort_order: reorderMap.get(resource.id) ?? resource.sort_order }
+          : resource
+      );
     });
+
     reorderResources.mutate(updates);
   };
 
@@ -771,8 +822,11 @@ const SpecialtyDetail = () => {
                 ) : (
                   <DndContext
                     sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={(e) => handleCrossGroupDragEnd(e, subResources, allSubheadings)}
+                    collisionDetection={resourceCollisionDetection}
+                    onDragStart={handleResourceDragStart}
+                    onDragOver={(e) => handleResourceDragOver(e, subResources)}
+                    onDragEnd={(e) => handleCrossGroupDragEnd(e, subResources)}
+                    onDragCancel={resetResourceDrag}
                   >
                     <div className="space-y-4">
                       {(ungrouped.length > 0 || ungroupedFolders.length > 0 || canManage) && (
@@ -785,6 +839,7 @@ const SpecialtyDetail = () => {
                             selectable={selectMode}
                             selectedIds={selectedResourceIds}
                             onToggleSelect={toggleSelectResource}
+                            activeDropTargetId={activeDragTargetId}
                           />
                           {ungroupedFolders.map((f: any) => (
                             <ResourceFolder
@@ -800,6 +855,7 @@ const SpecialtyDetail = () => {
                               selectedFolderIds={selectedFolderIds}
                               onToggleSelect={toggleSelectResource}
                               onToggleFolderSelect={toggleSelectFolder}
+                              activeDropTargetId={activeDragTargetId}
                             />
                           ))}
                         </>
@@ -817,6 +873,7 @@ const SpecialtyDetail = () => {
                             selectable={selectMode}
                             selectedIds={selectedResourceIds}
                             onToggleSelect={toggleSelectResource}
+                            activeDropTargetId={activeDragTargetId}
                           />
                           {group.folders.map((f: any) => (
                             <ResourceFolder
@@ -832,11 +889,26 @@ const SpecialtyDetail = () => {
                               selectedFolderIds={selectedFolderIds}
                               onToggleSelect={toggleSelectResource}
                               onToggleFolderSelect={toggleSelectFolder}
+                              activeDropTargetId={activeDragTargetId}
                             />
                           ))}
                         </div>
                       ))}
                     </div>
+                    <DragOverlay dropAnimation={null}>
+                      {activeDragResourceId ? (
+                        <div className="pointer-events-none fixed left-0 top-0 z-50">
+                          <ResourceDragPreview
+                            resource={subResources.find((resource) => resource.id === activeDragResourceId) ?? subResources[0]}
+                          />
+                          {getDropLabel(activeDragTargetId, resourceFolders) ? (
+                            <div className="mt-2 inline-flex items-center rounded-md border border-accent/30 bg-card/95 px-3 py-1 text-xs font-medium text-accent shadow-lg backdrop-blur-sm">
+                              {getDropLabel(activeDragTargetId, resourceFolders)}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </DragOverlay>
                   </DndContext>
                 )}
               </TabsContent>
