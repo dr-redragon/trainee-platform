@@ -29,6 +29,7 @@ export function DroppableSubheadingGroup({
   onToggleSelect,
 }: DroppableSubheadingGroupProps) {
   const { setNodeRef, isOver } = useDroppable({ id: `group:${groupId}` });
+  const containerId = `group:${groupId}`;
 
   return (
     <SubheadingGroup
@@ -57,6 +58,7 @@ export function DroppableSubheadingGroup({
                 <ResourceCard
                   key={r.id}
                   resource={r}
+                  containerId={containerId}
                   canManage={canManage}
                   onDelete={onDelete}
                   existingSubheadings={existingSubheadings}
@@ -93,6 +95,7 @@ export function DroppableUngrouped({
   onToggleSelect,
 }: DroppableUngroupedProps) {
   const { setNodeRef, isOver } = useDroppable({ id: "group:__ungrouped__" });
+  const containerId = "group:__ungrouped__";
 
   return (
     <div
@@ -116,6 +119,7 @@ export function DroppableUngrouped({
               <ResourceCard
                 key={r.id}
                 resource={r}
+                containerId={containerId}
                 canManage={canManage}
                 onDelete={onDelete}
                 existingSubheadings={existingSubheadings}
