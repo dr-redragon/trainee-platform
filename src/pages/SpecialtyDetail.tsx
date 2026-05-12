@@ -91,6 +91,8 @@ const SpecialtyDetail = () => {
   const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [activeDragResourceId, setActiveDragResourceId] = useState<string | null>(null);
+  const [activeDragTargetId, setActiveDragTargetId] = useState<string | null>(null);
 
   const toggleSelectResource = (id: string) => {
     setSelectedResourceIds((prev) => {
@@ -129,6 +131,17 @@ const SpecialtyDetail = () => {
     setSelectMode(false);
     setSelectedResourceIds(new Set());
     setSelectedFolderIds(new Set());
+  };
+
+  const getDropLabel = (targetId: string | null, folders: Tables<"resource_folders">[] | undefined) => {
+    if (!targetId) return null;
+    if (targetId.startsWith("folder:")) {
+      const folder = folders?.find((item) => item.id === targetId.replace("folder:", ""));
+      return folder ? `Move into ${folder.name}` : "Move into folder";
+    }
+    if (targetId === UNGROUPED_DROP_ID) return "Move to ungrouped";
+    if (targetId.startsWith("group:")) return `Move into ${targetId.replace("group:", "")}`;
+    return null;
   };
 
   const handleBulkDelete = async () => {
