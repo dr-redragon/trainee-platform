@@ -90,15 +90,12 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
 
       let successCount = 0;
       for (let i = 0; i < groups.length; i++) {
-        const { file, folderName } = groups[i];
+        const { file } = groups[i];
         setUploadProgress({ current: i + 1, total: groups.length, fileName: file.name });
         const ext = file.name.split(".").pop();
         const path = `${specialtyId}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
-
-        // Folder name (from dropped folder) takes precedence over form subheading
-        const rowSubheading = folderName || formSubheading;
 
         await supabase.from("resources").insert({
           title: file.name.replace(/\.[^.]+$/, ""),
@@ -107,7 +104,7 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
           file_url: path,
           added_by: user?.id ?? null,
           sort_order: nextOrder++,
-          subheading: rowSubheading && rowSubheading !== "none" ? rowSubheading : null,
+          subheading: formSubheading && formSubheading !== "none" ? formSubheading : null,
           file_size: file.size,
         } as any);
         successCount++;
