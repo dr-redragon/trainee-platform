@@ -69,6 +69,12 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
   };
 
   const handleBulkUpload = async (files: File[]) => {
+    return handleBulkUploadGroups(files.map((file) => ({ folderName: null, file })));
+  };
+
+  const handleBulkUploadGroups = async (
+    groups: { folderName: string | null; file: File }[],
+  ) => {
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -79,34 +85,34 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
         .order("sort_order", { ascending: false })
         .limit(1);
       let nextOrder = ((existing?.[0]?.sort_order ?? -1) + 1);
-      const finalSubheading = subheading === "__new__" ? customSubheading.trim() : subheading;
-      setUploadProgress({ current: 0, total: files.length, fileName: "" });
+      const formSubheading = subheading === "__new__" ? customSubheading.trim() : subheading;
+      setUploadProgress({ current: 0, total: groups.length, fileName: "" });
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setUploadProgress({ current: i + 1, total: files.length, fileName: file.name });
+      let successCount = 0;
+      for (let i = 0; i < groups.length; i++) {
+        const { file, folderName } = groups[i];
+        setUploadProgress({ current: i + 1, total: groups.length, fileName: file.name });
         const ext = file.name.split(".").pop();
         const path = `${specialtyId}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
 
-        let rType = "document";
-        if (file.type === "application/pdf") rType = "pdf";
-        else if (file.type.startsWith("video/")) rType = "video";
-        else if (file.name.endsWith(".pptx") || file.name.endsWith(".ppt")) rType = "presentation";
+        // Folder name (from dropped folder) takes precedence over form subheading
+        const rowSubheading = folderName || formSubheading;
 
         await supabase.from("resources").insert({
           title: file.name.replace(/\.[^.]+$/, ""),
-          resource_type: rType as any,
+          resource_type: detectResourceType(file) as any,
           subsection_id: subsectionId,
           file_url: path,
           added_by: user?.id ?? null,
           sort_order: nextOrder++,
-          subheading: finalSubheading || null,
+          subheading: rowSubheading && rowSubheading !== "none" ? rowSubheading : null,
           file_size: file.size,
         } as any);
+        successCount++;
       }
-      toast.success(`${files.length} files uploaded`);
+      toast.success(`${successCount} file${successCount === 1 ? "" : "s"} uploaded`);
       queryClient.invalidateQueries({ queryKey: ["resources"] });
       resetForm();
     } catch (e: any) {
