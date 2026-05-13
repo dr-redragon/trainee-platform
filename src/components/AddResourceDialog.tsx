@@ -36,23 +36,21 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
   const [dragItemCount, setDragItemCount] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 1) {
-      // Multi-file: trigger bulk upload
-      handleBulkUpload(files);
+    const groups = await getDroppedFiles(e.dataTransfer);
+    if (groups.length === 0) return;
+
+    const hasFolder = groups.some((g) => g.folderName !== null);
+    if (groups.length > 1 || hasFolder) {
+      handleBulkUploadGroups(groups);
       return;
     }
-    const f = files[0];
-    if (f) {
-      setFile(f);
-      if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
-      if (f.type === "application/pdf") setResourceType("pdf");
-      else if (f.type.startsWith("video/")) setResourceType("video");
-      else if (f.name.endsWith(".pptx") || f.name.endsWith(".ppt")) setResourceType("presentation");
-    }
+    const f = groups[0].file;
+    setFile(f);
+    if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
+    setResourceType(detectResourceType(f));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
