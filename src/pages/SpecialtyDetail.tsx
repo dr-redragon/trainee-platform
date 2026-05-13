@@ -750,6 +750,8 @@ const SpecialtyDetail = () => {
                   }
                 }}
                 onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setNativeDropItemCount(0);
                   if (e.dataTransfer.files.length > 0) handleNativeFileDrop(e, sub.id);
                 }}
