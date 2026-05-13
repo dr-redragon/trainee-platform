@@ -249,6 +249,17 @@ const SpecialtyDetail = () => {
       const folderIdMap: Record<string, string> = {};
 
       for (const folderName of folderNames) {
+        // Reuse existing folder with same name in this subsection if one exists
+        const { data: existingFolder } = await supabase
+          .from("resource_folders")
+          .select("id")
+          .eq("subsection_id", subsectionId)
+          .eq("name", folderName)
+          .maybeSingle();
+        if (existingFolder) {
+          folderIdMap[folderName] = (existingFolder as any).id;
+          continue;
+        }
         const { data: folderData, error: folderErr } = await supabase
           .from("resource_folders")
           .insert({ name: folderName, subsection_id: subsectionId, sort_order: 0 } as any)
