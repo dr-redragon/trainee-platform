@@ -222,8 +222,8 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
             ) : (
               <>
                 <Upload className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Drag & drop file(s) here, or click to browse</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">Drop multiple files for bulk upload</p>
+                <p className="text-sm text-muted-foreground">Drag & drop file(s) or a folder, or click to browse</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">Folder names become subheadings • file types auto-detected</p>
               </>
             )}
             <FileDropOverlay active={dragOver} itemCount={dragItemCount} />
