@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { UploadProgressBar } from "@/components/UploadProgressBar";
 import { FileDropOverlay } from "@/components/FileDropOverlay";
 import { Constants } from "@/integrations/supabase/types";
+import { getDroppedFiles, detectResourceType } from "@/lib/fileDropUtils";
 
 interface AddResourceDialogProps {
   subsectionId: string;
