@@ -86,16 +86,51 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
         .limit(1);
       let nextOrder = ((existing?.[0]?.sort_order ?? -1) + 1);
       const formSubheading = subheading === "__new__" ? customSubheading.trim() : subheading;
+      const rowSubheading = formSubheading && formSubheading !== "none" ? formSubheading : null;
       setUploadProgress({ current: 0, total: groups.length, fileName: "" });
+
+      // Create folder records for each unique dropped folder
+      const folderIdMap: Record<string, string> = {};
+      const uniqueFolderNames = Array.from(
+        new Set(groups.map((g) => g.folderName).filter((n): n is string => !!n)),
+      );
+      if (uniqueFolderNames.length > 0) {
+        const { data: existingFolders } = await supabase
+          .from("resource_folders")
+          .select("sort_order")
+          .eq("subsection_id", subsectionId)
+          .order("sort_order", { ascending: false })
+          .limit(1);
+        let nextFolderOrder = (((existingFolders as any)?.[0]?.sort_order ?? -1) + 1);
+        for (const folderName of uniqueFolderNames) {
+          const { data: created, error: folderErr } = await supabase
+            .from("resource_folders")
+            .insert({
+              name: folderName,
+              subsection_id: subsectionId,
+              subheading: rowSubheading,
+              sort_order: nextFolderOrder++,
+            } as any)
+            .select("id")
+            .single();
+          if (folderErr || !created) {
+            toast.error(`Failed to create folder: ${folderName}`);
+            continue;
+          }
+          folderIdMap[folderName] = (created as any).id;
+        }
+      }
 
       let successCount = 0;
       for (let i = 0; i < groups.length; i++) {
-        const { file } = groups[i];
+        const { file, folderName } = groups[i];
         setUploadProgress({ current: i + 1, total: groups.length, fileName: file.name });
         const ext = file.name.split(".").pop();
         const path = `${specialtyId}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
+
+        const folderId = folderName ? folderIdMap[folderName] ?? null : null;
 
         await supabase.from("resources").insert({
           title: file.name.replace(/\.[^.]+$/, ""),
@@ -104,13 +139,15 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
           file_url: path,
           added_by: user?.id ?? null,
           sort_order: nextOrder++,
-          subheading: formSubheading && formSubheading !== "none" ? formSubheading : null,
+          subheading: rowSubheading,
+          folder_id: folderId,
           file_size: file.size,
         } as any);
         successCount++;
       }
       toast.success(`${successCount} file${successCount === 1 ? "" : "s"} uploaded`);
       queryClient.invalidateQueries({ queryKey: ["resources"] });
+      queryClient.invalidateQueries({ queryKey: ["resource-folders"] });
       resetForm();
     } catch (e: any) {
       toast.error(e.message);
