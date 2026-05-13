@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { UploadProgressBar } from "@/components/UploadProgressBar";
 import { FileDropOverlay } from "@/components/FileDropOverlay";
 import { Constants } from "@/integrations/supabase/types";
+import { getDroppedFiles, detectResourceType } from "@/lib/fileDropUtils";
 
 interface AddResourceDialogProps {
   subsectionId: string;
@@ -35,23 +36,21 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
   const [dragItemCount, setDragItemCount] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 1) {
-      // Multi-file: trigger bulk upload
-      handleBulkUpload(files);
+    const groups = await getDroppedFiles(e.dataTransfer);
+    if (groups.length === 0) return;
+
+    const hasFolder = groups.some((g) => g.folderName !== null);
+    if (groups.length > 1 || hasFolder) {
+      handleBulkUploadGroups(groups);
       return;
     }
-    const f = files[0];
-    if (f) {
-      setFile(f);
-      if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
-      if (f.type === "application/pdf") setResourceType("pdf");
-      else if (f.type.startsWith("video/")) setResourceType("video");
-      else if (f.name.endsWith(".pptx") || f.name.endsWith(".ppt")) setResourceType("presentation");
-    }
+    const f = groups[0].file;
+    setFile(f);
+    if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
+    setResourceType(detectResourceType(f));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,6 +69,12 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
   };
 
   const handleBulkUpload = async (files: File[]) => {
+    return handleBulkUploadGroups(files.map((file) => ({ folderName: null, file })));
+  };
+
+  const handleBulkUploadGroups = async (
+    groups: { folderName: string | null; file: File }[],
+  ) => {
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -80,34 +85,34 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
         .order("sort_order", { ascending: false })
         .limit(1);
       let nextOrder = ((existing?.[0]?.sort_order ?? -1) + 1);
-      const finalSubheading = subheading === "__new__" ? customSubheading.trim() : subheading;
-      setUploadProgress({ current: 0, total: files.length, fileName: "" });
+      const formSubheading = subheading === "__new__" ? customSubheading.trim() : subheading;
+      setUploadProgress({ current: 0, total: groups.length, fileName: "" });
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setUploadProgress({ current: i + 1, total: files.length, fileName: file.name });
+      let successCount = 0;
+      for (let i = 0; i < groups.length; i++) {
+        const { file, folderName } = groups[i];
+        setUploadProgress({ current: i + 1, total: groups.length, fileName: file.name });
         const ext = file.name.split(".").pop();
         const path = `${specialtyId}/${subsectionId}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadErr } = await supabase.storage.from("resources").upload(path, file);
         if (uploadErr) { toast.error(`Failed: ${file.name}`); continue; }
 
-        let rType = "document";
-        if (file.type === "application/pdf") rType = "pdf";
-        else if (file.type.startsWith("video/")) rType = "video";
-        else if (file.name.endsWith(".pptx") || file.name.endsWith(".ppt")) rType = "presentation";
+        // Folder name (from dropped folder) takes precedence over form subheading
+        const rowSubheading = folderName || formSubheading;
 
         await supabase.from("resources").insert({
           title: file.name.replace(/\.[^.]+$/, ""),
-          resource_type: rType as any,
+          resource_type: detectResourceType(file) as any,
           subsection_id: subsectionId,
           file_url: path,
           added_by: user?.id ?? null,
           sort_order: nextOrder++,
-          subheading: finalSubheading || null,
+          subheading: rowSubheading && rowSubheading !== "none" ? rowSubheading : null,
           file_size: file.size,
         } as any);
+        successCount++;
       }
-      toast.success(`${files.length} files uploaded`);
+      toast.success(`${successCount} file${successCount === 1 ? "" : "s"} uploaded`);
       queryClient.invalidateQueries({ queryKey: ["resources"] });
       resetForm();
     } catch (e: any) {
@@ -217,8 +222,8 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
             ) : (
               <>
                 <Upload className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Drag & drop file(s) here, or click to browse</p>
-                <p className="text-xs text-muted-foreground/60 mt-1">Drop multiple files for bulk upload</p>
+                <p className="text-sm text-muted-foreground">Drag & drop file(s) or a folder, or click to browse</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">Folder names become subheadings • file types auto-detected</p>
               </>
             )}
             <FileDropOverlay active={dragOver} itemCount={dragItemCount} />
