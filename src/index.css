@@ -118,4 +118,25 @@
   .font-body {
     font-family: var(--font-body);
   }
+
+  /* Always-visible thin horizontal scrollbar for tab lists */
+  .tabs-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.5) transparent;
+  }
+  .tabs-scrollbar::-webkit-scrollbar {
+    height: 6px;
+    -webkit-appearance: none;
+  }
+  .tabs-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--muted) / 0.4);
+    border-radius: 9999px;
+  }
+  .tabs-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+    border-radius: 9999px;
+  }
+  .tabs-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.8);
+  }
 }
