@@ -97,16 +97,22 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
       if (uniqueFolderNames.length > 0) {
         const { data: existingFolders } = await supabase
           .from("resource_folders")
-          .select("sort_order")
-          .eq("subsection_id", subsectionId)
-          .order("sort_order", { ascending: false })
-          .limit(1);
-        let nextFolderOrder = (((existingFolders as any)?.[0]?.sort_order ?? -1) + 1);
+          .select("name, sort_order")
+          .eq("subsection_id", subsectionId);
+        const takenNames = new Set(((existingFolders as any) ?? []).map((r: any) => r.name as string));
+        let nextFolderOrder =
+          (((existingFolders as any) ?? []).reduce((m: number, r: any) => Math.max(m, r.sort_order ?? 0), -1)) + 1;
         for (const folderName of uniqueFolderNames) {
+          let uniqueName = folderName;
+          let n = 2;
+          while (takenNames.has(uniqueName)) {
+            uniqueName = `${folderName} (${n++})`;
+          }
+          takenNames.add(uniqueName);
           const { data: created, error: folderErr } = await supabase
             .from("resource_folders")
             .insert({
-              name: folderName,
+              name: uniqueName,
               subsection_id: subsectionId,
               subheading: rowSubheading,
               sort_order: nextFolderOrder++,
@@ -114,7 +120,7 @@ export function AddResourceDialog({ subsectionId, specialtyId, existingSubheadin
             .select("id")
             .single();
           if (folderErr || !created) {
-            toast.error(`Failed to create folder: ${folderName}`);
+            toast.error(`Failed to create folder: ${uniqueName}`);
             continue;
           }
           folderIdMap[folderName] = (created as any).id;
