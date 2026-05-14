@@ -249,23 +249,23 @@ const SpecialtyDetail = () => {
       const folderIdMap: Record<string, string> = {};
 
       for (const folderName of folderNames) {
-        // Reuse existing folder with same name in this subsection if one exists
-        const { data: existingFolder } = await supabase
+        // Find a unique folder name; if taken, append (2), (3), etc.
+        const { data: siblings } = await supabase
           .from("resource_folders")
-          .select("id")
-          .eq("subsection_id", subsectionId)
-          .eq("name", folderName)
-          .maybeSingle();
-        if (existingFolder) {
-          folderIdMap[folderName] = (existingFolder as any).id;
-          continue;
+          .select("name")
+          .eq("subsection_id", subsectionId);
+        const takenNames = new Set(((siblings as any) ?? []).map((r: any) => r.name as string));
+        let uniqueName = folderName;
+        let n = 2;
+        while (takenNames.has(uniqueName)) {
+          uniqueName = `${folderName} (${n++})`;
         }
         const { data: folderData, error: folderErr } = await supabase
           .from("resource_folders")
-          .insert({ name: folderName, subsection_id: subsectionId, sort_order: 0 } as any)
+          .insert({ name: uniqueName, subsection_id: subsectionId, sort_order: 0 } as any)
           .select("id")
           .single();
-        if (folderErr) { toast.error(`Failed to create folder: ${folderName}`); continue; }
+        if (folderErr) { toast.error(`Failed to create folder: ${uniqueName}`); continue; }
         folderIdMap[folderName] = (folderData as any).id;
       }
       setNativeUploadProgress({ current: 0, total: droppedFiles.length, fileName: "" });
