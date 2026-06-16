@@ -57,6 +57,7 @@ const AdminPanel = () => {
           <TabsContent value="contacts" className="mt-4"><AdminContacts /></TabsContent>
           <TabsContent value="announcements" className="mt-4"><AdminAnnouncements /></TabsContent>
           <TabsContent value="requests" className="mt-4"><AdminAccessRequests /></TabsContent>
+          <TabsContent value="attendance" className="mt-4"><AdminAttendance /></TabsContent>
           <TabsContent value="specialties" className="mt-4"><AdminSpecialties /></TabsContent>
           <TabsContent value="deaneries" className="mt-4"><AdminDeaneries /></TabsContent>
         </Tabs>
