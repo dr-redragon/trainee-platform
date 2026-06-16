@@ -78,7 +78,7 @@ export function AdminAttendance() {
   const [newLocation, setNewLocation] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const deaneryId = currentDeanery?.id;
+  const deaneryId = activeDeanery?.id;
 
   async function loadAll() {
     if (!deaneryId) return;
