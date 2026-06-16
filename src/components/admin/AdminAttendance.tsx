@@ -62,7 +62,7 @@ const STATUS_ORDER: Status[] = ["present", "late", "excused", "absent"];
 export function AdminAttendance() {
   const { data: user } = useCurrentUser();
   const { data: role } = useUserRole();
-  const { currentDeanery } = useDeanery();
+  const { activeDeanery } = useDeanery();
   const canManage = role === "admin" || role === "super_admin" || role === "facilitator";
 
   const [sessions, setSessions] = useState<Session[]>([]);
