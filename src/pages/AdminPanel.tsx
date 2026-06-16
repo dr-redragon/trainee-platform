@@ -7,7 +7,8 @@ import { AdminAnnouncements } from "@/components/admin/AdminAnnouncements";
 import { AdminAccessRequests } from "@/components/admin/AdminAccessRequests";
 import { AdminDeaneries } from "@/components/admin/AdminDeaneries";
 import { AdminSpecialties } from "@/components/admin/AdminSpecialties";
-import { Shield, Users, BookOpen, Phone, Megaphone, UserPlus, Building2, Stethoscope } from "lucide-react";
+import { AdminAttendance } from "@/components/admin/AdminAttendance";
+import { Shield, Users, BookOpen, Phone, Megaphone, UserPlus, Building2, Stethoscope, ClipboardCheck } from "lucide-react";
 
 const AdminPanel = () => {
   return (
@@ -40,6 +41,9 @@ const AdminPanel = () => {
             <TabsTrigger value="requests" className="gap-1.5 text-xs">
               <UserPlus className="h-3.5 w-3.5" /> Requests
             </TabsTrigger>
+            <TabsTrigger value="attendance" className="gap-1.5 text-xs">
+              <ClipboardCheck className="h-3.5 w-3.5" /> Attendance
+            </TabsTrigger>
             <TabsTrigger value="specialties" className="gap-1.5 text-xs">
               <Stethoscope className="h-3.5 w-3.5" /> Specialties
             </TabsTrigger>
@@ -53,6 +57,7 @@ const AdminPanel = () => {
           <TabsContent value="contacts" className="mt-4"><AdminContacts /></TabsContent>
           <TabsContent value="announcements" className="mt-4"><AdminAnnouncements /></TabsContent>
           <TabsContent value="requests" className="mt-4"><AdminAccessRequests /></TabsContent>
+          <TabsContent value="attendance" className="mt-4"><AdminAttendance /></TabsContent>
           <TabsContent value="specialties" className="mt-4"><AdminSpecialties /></TabsContent>
           <TabsContent value="deaneries" className="mt-4"><AdminDeaneries /></TabsContent>
         </Tabs>

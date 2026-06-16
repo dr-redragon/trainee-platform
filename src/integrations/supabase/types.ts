@@ -121,6 +121,47 @@ export type Database = {
           },
         ]
       }
+      attendance_records: {
+        Row: {
+          created_at: string
+          id: string
+          marked_by: string | null
+          notes: string | null
+          session_id: string
+          status: Database["public"]["Enums"]["attendance_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          session_id: string
+          status?: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          session_id?: string
+          status?: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "teaching_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -792,6 +833,60 @@ export type Database = {
           },
         ]
       }
+      teaching_sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deanery_id: string | null
+          id: string
+          location: string | null
+          notes: string | null
+          session_date: string
+          specialty_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deanery_id?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          session_date: string
+          specialty_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deanery_id?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          session_date?: string
+          specialty_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaching_sessions_deanery_id_fkey"
+            columns: ["deanery_id"]
+            isOneToOne: false
+            referencedRelation: "deaneries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaching_sessions_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainee_specialties: {
         Row: {
           created_at: string
@@ -914,6 +1009,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "trainee" | "facilitator" | "super_admin"
+      attendance_status: "present" | "absent" | "late" | "excused"
       contact_category:
         | "deanery"
         | "tpd"
@@ -1060,6 +1156,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "trainee", "facilitator", "super_admin"],
+      attendance_status: ["present", "absent", "late", "excused"],
       contact_category: [
         "deanery",
         "tpd",
