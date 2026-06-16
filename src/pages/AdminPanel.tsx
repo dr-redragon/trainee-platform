@@ -41,6 +41,9 @@ const AdminPanel = () => {
             <TabsTrigger value="requests" className="gap-1.5 text-xs">
               <UserPlus className="h-3.5 w-3.5" /> Requests
             </TabsTrigger>
+            <TabsTrigger value="attendance" className="gap-1.5 text-xs">
+              <ClipboardCheck className="h-3.5 w-3.5" /> Attendance
+            </TabsTrigger>
             <TabsTrigger value="specialties" className="gap-1.5 text-xs">
               <Stethoscope className="h-3.5 w-3.5" /> Specialties
             </TabsTrigger>
