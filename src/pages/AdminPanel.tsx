@@ -7,7 +7,8 @@ import { AdminAnnouncements } from "@/components/admin/AdminAnnouncements";
 import { AdminAccessRequests } from "@/components/admin/AdminAccessRequests";
 import { AdminDeaneries } from "@/components/admin/AdminDeaneries";
 import { AdminSpecialties } from "@/components/admin/AdminSpecialties";
-import { Shield, Users, BookOpen, Phone, Megaphone, UserPlus, Building2, Stethoscope } from "lucide-react";
+import { AdminAttendance } from "@/components/admin/AdminAttendance";
+import { Shield, Users, BookOpen, Phone, Megaphone, UserPlus, Building2, Stethoscope, ClipboardCheck } from "lucide-react";
 
 const AdminPanel = () => {
   return (
