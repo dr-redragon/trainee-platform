@@ -16,6 +16,8 @@ export function AdminAttendance() {
           src="/teaching-register.html"
           title="ENT Teaching Register"
           className="w-full"
+          allow="clipboard-read; clipboard-write; downloads"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-forms allow-top-navigation-by-user-activation"
           style={{ height: "calc(100vh - 220px)", minHeight: "700px", border: 0 }}
         />
       </div>
