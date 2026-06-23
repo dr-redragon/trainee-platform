@@ -1234,10 +1234,25 @@ function generateReport(){
     .sort((a,b)=>a.trainee.name.localeCompare(b.trainee.name));
 
   const html=buildReportHtml({rows,filtSess,selectedYears,includeCCT,includeIDT,showSessions,showRaw,showAdj,summaryOnly});
-  const win=window.open('','_blank');
-  if(!win){ toast('Pop-up blocked — please allow pop-ups for this page'); return; }
-  win.document.write(html);
-  win.document.close();
+  let win=null;
+  try{ win=window.open('','_blank'); }catch(e){}
+  if(win && win.document){
+    win.document.write(html);
+    win.document.close();
+  } else {
+    // Fallback for sandboxed/iframe contexts where window.open is blocked
+    const blob=new Blob([html],{type:'text/html'});
+    const url=URL.createObjectURL(blob);
+    const opened=window.open(url,'_blank');
+    if(!opened){
+      const a=document.createElement('a');
+      a.href=url; a.target='_blank'; a.rel='noopener';
+      a.download='attendance-report.html';
+      document.body.appendChild(a); a.click(); a.remove();
+      toast('Report downloaded — open the file to view/print');
+    }
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
   hideReportModal();
 }
 
