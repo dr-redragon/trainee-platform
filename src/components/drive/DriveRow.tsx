@@ -39,7 +39,6 @@ const typeIcons: Record<string, typeof FileText> = {
 };
 
 interface BaseRowProps {
-  id: string;
   selected: boolean;
   onClick: (e: React.MouseEvent) => void;
   canManage: boolean;
