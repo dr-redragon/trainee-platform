@@ -732,201 +732,50 @@ const SpecialtyDetail = () => {
             const hasContent = subResources.length > 0 || subFolders.length > 0 || grouped.length > 0;
 
             return (
-              <TabsContent
-                key={sub.id}
-                value={sub.name}
-                className={`relative mt-4 space-y-3 rounded-lg p-2 -m-2 transition-colors ${nativeDropSub === sub.id ? "bg-accent/5" : ""}`}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (nativeDropSub !== sub.id) {
-                    setNativeDropSub(sub.id);
-                    setNativeDropItemCount(e.dataTransfer.items?.length ?? 0);
-                  }
-                }}
-                onDragLeave={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                    setNativeDropSub(null);
-                    setNativeDropItemCount(0);
-                  }
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setNativeDropItemCount(0);
-                  if (e.dataTransfer.files.length > 0) handleNativeFileDrop(e, sub.id);
-                }}
-              >
-                <FileDropOverlay
-                  active={nativeDropSub === sub.id}
-                  itemCount={nativeDropItemCount}
-                  label={`Drop into ${sub.name}`}
-                />
-
-                <div className="flex items-center justify-between">
+              <TabsContent key={sub.id} value={sub.name} className="mt-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
                   <h3 className="font-semibold text-sm">{sub.name}</h3>
-                  <div className="flex items-center gap-1">
-                    {canManage && (
-                      <>
-                        <Button
-                          variant={selectMode ? "default" : "outline"}
-                          size="sm"
-                          className="gap-1 text-xs h-8"
-                          onClick={() => selectMode ? clearSelection() : setSelectMode(true)}
-                        >
-                          <CheckSquare className="h-3.5 w-3.5" /> {selectMode ? "Cancel" : "Select"}
+                  {canManage && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
-                        {!selectMode && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1 text-xs h-8"
-                              onClick={() => { setAddSubheadingForSub(sub.id); setNewSubheadingName(""); }}
-                            >
-                              <ListPlus className="h-3.5 w-3.5" /> Subheading
-                            </Button>
-                            <AddFolderDialog subsectionId={sub.id} />
-                            <AddResourceDialog subsectionId={sub.id} specialtyId={specialty.id} existingSubheadings={allSubheadings} />
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => {
-                                  setRenameSubId(sub.id);
-                                  setRenameSubName(sub.name);
-                                }}>
-                                  <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Section
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={() => {
-                                    setDeleteSubId(sub.id);
-                                    setDeleteAction(otherSubsections.length > 0 ? "move" : "delete");
-                                    const others = subsections?.filter((s) => s.id !== sub.id) ?? [];
-                                    setMoveTargetId(others[0]?.id ?? "");
-                                  }}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Section
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => {
+                          setRenameSubId(sub.id);
+                          setRenameSubName(sub.name);
+                        }}>
+                          <Pencil className="h-3.5 w-3.5 mr-2" /> Rename Section
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => {
+                            setDeleteSubId(sub.id);
+                            setDeleteAction(otherSubsections.length > 0 ? "move" : "delete");
+                            const others = subsections?.filter((s) => s.id !== sub.id) ?? [];
+                            setMoveTargetId(others[0]?.id ?? "");
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Section
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
 
-                {nativeDropUploading && nativeUploadProgress.total > 0 && (
-                  <UploadProgressBar current={nativeUploadProgress.current} total={nativeUploadProgress.total} currentFileName={nativeUploadProgress.fileName} />
-                )}
-
-                {!hasContent ? (
-                  <Card className="border-dashed">
-                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                      <FolderOpen className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                      <p className="text-sm text-muted-foreground">No resources yet</p>
-                      {canManage && <p className="text-xs text-muted-foreground/60 mt-1">Click "Add Resource" or "Folder" to get started</p>}
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={resourceCollisionDetection}
-                    onDragStart={handleResourceDragStart}
-                    onDragOver={(e) => handleResourceDragOver(e, subResources)}
-                    onDragEnd={(e) => handleCrossGroupDragEnd(e, subResources)}
-                    onDragCancel={resetResourceDrag}
-                  >
-                    <div className="space-y-4">
-                      {(ungrouped.length > 0 || ungroupedFolders.length > 0 || canManage) && (
-                        <>
-                         <DroppableUngrouped
-                            resources={ungrouped}
-                            canManage={!!canManage}
-                            onDelete={(rid) => deleteResource.mutate(rid)}
-                            existingSubheadings={allSubheadings}
-                            selectable={selectMode}
-                            selectedIds={selectedResourceIds}
-                            onToggleSelect={toggleSelectResource}
-                            activeDropTargetId={activeDragTargetId}
-                          />
-                          {ungroupedFolders.map((f: any) => (
-                            <ResourceFolder
-                              key={f.id}
-                              folder={f}
-                              resources={subResources.filter((r) => (r as any).folder_id === f.id)}
-                              canManage={!!canManage}
-                              specialtyId={specialty.id}
-                              onDeleteResource={(rid) => deleteResource.mutate(rid)}
-                              existingSubheadings={allSubheadings}
-                              selectable={selectMode}
-                              selectedIds={selectedResourceIds}
-                              selectedFolderIds={selectedFolderIds}
-                              onToggleSelect={toggleSelectResource}
-                              onToggleFolderSelect={toggleSelectFolder}
-                              activeDropTargetId={activeDragTargetId}
-                            />
-                          ))}
-                        </>
-                      )}
-
-                      {grouped.map((group) => (
-                        <div key={group.name} className="space-y-2">
-                          <DroppableSubheadingGroup
-                            groupId={group.name}
-                            name={group.name}
-                            resources={group.resources}
-                            canManage={!!canManage}
-                            onDelete={(rid) => deleteResource.mutate(rid)}
-                            existingSubheadings={allSubheadings}
-                            selectable={selectMode}
-                            selectedIds={selectedResourceIds}
-                            onToggleSelect={toggleSelectResource}
-                            activeDropTargetId={activeDragTargetId}
-                          />
-                          {group.folders.map((f: any) => (
-                            <ResourceFolder
-                              key={f.id}
-                              folder={f}
-                              resources={subResources.filter((r) => (r as any).folder_id === f.id)}
-                              canManage={!!canManage}
-                              specialtyId={specialty.id}
-                              onDeleteResource={(rid) => deleteResource.mutate(rid)}
-                              existingSubheadings={allSubheadings}
-                              selectable={selectMode}
-                              selectedIds={selectedResourceIds}
-                              selectedFolderIds={selectedFolderIds}
-                              onToggleSelect={toggleSelectResource}
-                              onToggleFolderSelect={toggleSelectFolder}
-                              activeDropTargetId={activeDragTargetId}
-                            />
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                    <DragOverlay dropAnimation={null}>
-                      {activeDragResourceId ? (
-                        <div className="pointer-events-none fixed left-0 top-0 z-50">
-                          <ResourceDragPreview
-                            resource={subResources.find((resource) => resource.id === activeDragResourceId) ?? subResources[0]}
-                          />
-                          {getDropLabel(activeDragTargetId, resourceFolders) ? (
-                            <div className="mt-2 inline-flex items-center rounded-md border border-accent/30 bg-card/95 px-3 py-1 text-xs font-medium text-accent shadow-lg backdrop-blur-sm">
-                              {getDropLabel(activeDragTargetId, resourceFolders)}
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </DragOverlay>
-                  </DndContext>
-                )}
+                <DriveBrowser
+                  subsection={sub}
+                  specialtyId={specialty.id}
+                  resources={subResources}
+                  folders={subFolders as any}
+                  canManage={!!canManage}
+                />
               </TabsContent>
             );
           })}
+
 
           <TabsContent value="Key Contacts" className="mt-4 space-y-4">
             <h3 className="font-semibold text-sm">Key Contacts — {specialty.short_name}</h3>
