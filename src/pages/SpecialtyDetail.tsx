@@ -11,6 +11,7 @@ import { AddResourceDialog } from "@/components/AddResourceDialog";
 import { AddFolderDialog } from "@/components/AddFolderDialog";
 import { ResourceFolder } from "@/components/ResourceFolder";
 import { ResourceDragPreview } from "@/components/ResourceCard";
+import { DriveBrowser } from "@/components/drive/DriveBrowser";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
