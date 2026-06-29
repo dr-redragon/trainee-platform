@@ -540,6 +540,81 @@ export function AdminSpecialties() {
           {topLevel.map((spec) => renderSpecialtyRow(spec))}
         </div>
       )}
+
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setConfirmText(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" /> Delete specialty
+            </DialogTitle>
+          </DialogHeader>
+          {deleteTarget && (
+            <div className="space-y-4 pt-2 text-sm">
+              <p>
+                You are about to permanently delete{" "}
+                <span className="font-semibold">{deleteTarget.short_name}</span>
+                {" "}from <span className="font-medium">{activeDeanery?.name}</span>.
+              </p>
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 space-y-1.5 text-xs">
+                <p className="font-medium text-destructive">This will permanently remove:</p>
+                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                  <li>All sections, folders, and resources within this specialty</li>
+                  <li>All uploaded files in storage</li>
+                  <li>Any subspecialties beneath it</li>
+                  <li>Notices, discussions, and trainee/facilitator assignments</li>
+                </ul>
+                <p className="text-destructive font-medium pt-1">This action cannot be undone.</p>
+              </div>
+
+              <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                <p className="text-xs font-medium">Before deleting, download a backup:</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2"
+                  disabled={downloadingZip}
+                  onClick={() => handleDownloadSpecialtyZip(deleteTarget)}
+                >
+                  {downloadingZip ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Preparing ZIP…</>
+                  ) : (
+                    <><Download className="h-4 w-4" /> Download all contents as ZIP</>
+                  )}
+                </Button>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Type <span className="font-mono font-semibold">{deleteTarget.short_name}</span> to confirm
+                </Label>
+                <Input
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder={deleteTarget.short_name}
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => { setDeleteTarget(null); setConfirmText(""); }}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={confirmText !== deleteTarget.short_name || deleteSpecialty.isPending || downloadingZip}
+                  onClick={() => deleteSpecialty.mutate(deleteTarget)}
+                  className="gap-2"
+                >
+                  {deleteSpecialty.isPending ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Deleting…</>
+                  ) : (
+                    <><Trash2 className="h-4 w-4" /> Delete permanently</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
