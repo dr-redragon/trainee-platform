@@ -283,7 +283,7 @@ export function AdminSpecialties() {
       // Gather all storage paths so we can purge bucket objects (DB rows cascade-delete).
       const { resources } = await fetchSpecialtyResources(spec.id);
       const storagePaths = resources
-        .map((r: any) => (r.file_url ? extractStoragePathLocal(r.file_url) : null))
+        .map((r: any) => (r.file_url ? extractStoragePath(r.file_url) : null))
         .filter((p: string | null): p is string => !!p);
 
       if (storagePaths.length > 0) {
