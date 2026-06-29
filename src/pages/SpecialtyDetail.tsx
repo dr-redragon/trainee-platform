@@ -672,7 +672,7 @@ const SpecialtyDetail = () => {
 
         <Tabs value={activeTab ?? defaultTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex items-center gap-2">
-            <TabsList className="flex-1 justify-start overflow-x-scroll bg-secondary/50 p-1 tabs-scrollbar">
+            <TabsList className="flex-1 justify-start h-auto bg-secondary/50 p-1 tabs-scrollbar">
               {canManage && subsections?.length ? (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSubsectionDragEnd}>
                   <SortableContext items={subsections.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
