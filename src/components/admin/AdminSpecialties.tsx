@@ -27,6 +27,10 @@ export function AdminSpecialties() {
   const [newSpec, setNewSpec] = useState({ name: "", short_name: "", slug: "", icon_name: "Stethoscope", color: "174 60% 40%" });
   const [parentId, setParentId] = useState<string>("none");
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [downloadingZip, setDownloadingZip] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+
 
   const { data: specialties, isLoading } = useQuery({
     queryKey: ["admin-specialties", activeDeanery?.id],
