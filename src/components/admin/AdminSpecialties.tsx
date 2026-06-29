@@ -228,7 +228,96 @@ export function AdminSpecialties() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Collect all specialty IDs to delete (target + its children)
+  const collectSpecialtyIds = (specId: string): string[] => {
+    const kids = (specialties ?? []).filter((s) => s.parent_specialty_id === specId).map((s) => s.id);
+    return [specId, ...kids];
+  };
+
+  const fetchSpecialtyResources = async (specId: string) => {
+    const ids = collectSpecialtyIds(specId);
+    const { data: subs, error: subErr } = await supabase
+      .from("subsections").select("id").in("specialty_id", ids);
+    if (subErr) throw subErr;
+    const subIds = (subs ?? []).map((s: any) => s.id);
+    if (subIds.length === 0) return { resources: [] as any[], folders: [] as any[] };
+    const [{ data: resources, error: rErr }, { data: folders, error: fErr }] = await Promise.all([
+      supabase.from("resources").select("*").in("subsection_id", subIds),
+      supabase.from("resource_folders").select("id,name,subsection_id").in("subsection_id", subIds),
+    ]);
+    if (rErr) throw rErr;
+    if (fErr) throw fErr;
+    return { resources: resources ?? [], folders: folders ?? [] };
+  };
+
+  const handleDownloadSpecialtyZip = async (spec: any) => {
+    try {
+      setDownloadingZip(true);
+      const { resources, folders } = await fetchSpecialtyResources(spec.id);
+      const folderMap = new Map<string, string>(folders.map((f: any) => [f.id, f.name]));
+      const items = resources
+        .filter((r: any) => r.file_url)
+        .map((r: any) => ({
+          resource: r,
+          folderName: r.folder_id ? folderMap.get(r.folder_id) ?? null : null,
+        }));
+      if (items.length === 0) {
+        toast.info("No downloadable files in this specialty");
+        return;
+      }
+      const result = await downloadResourcesAsZip(items, spec.short_name || spec.name || "specialty");
+      toast.success(`Downloaded ${result.downloaded} file${result.downloaded === 1 ? "" : "s"}${result.skippedCount ? ` (${result.skippedCount} skipped)` : ""}`);
+    } catch (e: any) {
+      toast.error(e?.message || "Download failed");
+    } finally {
+      setDownloadingZip(false);
+    }
+  };
+
+  const deleteSpecialty = useMutation({
+    mutationFn: async (spec: any) => {
+      const ids = collectSpecialtyIds(spec.id);
+
+      // Gather all storage paths so we can purge bucket objects (DB rows cascade-delete).
+      const { resources } = await fetchSpecialtyResources(spec.id);
+      const storagePaths = resources
+        .map((r: any) => (r.file_url ? extractStoragePathLocal(r.file_url) : null))
+        .filter((p: string | null): p is string => !!p);
+
+      if (storagePaths.length > 0) {
+        // Storage `.remove` supports batches; chunk to be safe.
+        const chunkSize = 100;
+        for (let i = 0; i < storagePaths.length; i += chunkSize) {
+          const chunk = storagePaths.slice(i, i + chunkSize);
+          const { error } = await supabase.storage.from("resources").remove(chunk);
+          if (error) console.warn("Storage cleanup error:", error.message);
+        }
+      }
+
+      // Delete child specialties first (FK is SET NULL, not CASCADE, so do it manually).
+      const childIds = ids.filter((id) => id !== spec.id);
+      if (childIds.length > 0) {
+        const { error } = await supabase.from("specialties").delete().in("id", childIds);
+        if (error) throw error;
+      }
+
+      // Delete the specialty (cascades subsections → resources → folders).
+      const { error } = await supabase.from("specialties").delete().eq("id", spec.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Specialty deleted");
+      queryClient.invalidateQueries({ queryKey: ["admin-specialties"] });
+      queryClient.invalidateQueries({ queryKey: ["sidebar-specialties"] });
+      queryClient.invalidateQueries({ queryKey: ["my-specialties"] });
+      setDeleteTarget(null);
+      setConfirmText("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const otherDeaneries = allDeaneries.filter((d) => d.id !== activeDeanery?.id);
+
 
   const renderSpecialtyRow = (spec: any, isChild = false) => {
     const color = spec.color ?? "174 60% 40%";
