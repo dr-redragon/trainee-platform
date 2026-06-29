@@ -15,6 +15,8 @@ import { getIcon } from "@/lib/iconMap";
 import { IconColorPicker } from "@/components/IconColorPicker";
 import { toast } from "sonner";
 import { downloadResourcesAsZip } from "@/lib/resourceDownloads";
+import { extractStoragePath } from "@/lib/storageUtils";
+
 import type { TablesUpdate } from "@/integrations/supabase/types";
 
 
