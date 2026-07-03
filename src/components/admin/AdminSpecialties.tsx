@@ -667,23 +667,23 @@ export function AdminSpecialties() {
           {deleteTarget && (
             <div className="space-y-4 pt-2 text-sm">
               <p>
-                You are about to permanently delete{" "}
+                You are about to delete{" "}
                 <span className="font-semibold">{deleteTarget.short_name}</span>
                 {" "}from <span className="font-medium">{activeDeanery?.name}</span>.
               </p>
-              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 space-y-1.5 text-xs">
-                <p className="font-medium text-destructive">This will permanently remove:</p>
-                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-                  <li>All sections, folders, and resources within this specialty</li>
-                  <li>All uploaded files in storage</li>
-                  <li>Any subspecialties beneath it</li>
-                  <li>Notices, discussions, and trainee/facilitator assignments</li>
-                </ul>
-                <p className="text-destructive font-medium pt-1">This action cannot be undone.</p>
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 space-y-1.5 text-xs">
+                <p className="font-medium text-amber-700 dark:text-amber-400">
+                  Grace period: {GRACE_PERIOD_DAYS} days
+                </p>
+                <p className="text-muted-foreground">
+                  The specialty (and any subspecialties beneath it) will be hidden from trainees, facilitators, and the public site immediately, but kept in a
+                  <span className="font-medium"> Recently deleted </span>
+                  list so an admin can restore it. After {GRACE_PERIOD_DAYS} days it — along with all sections, folders, resources, and uploaded files — is permanently purged.
+                </p>
               </div>
 
               <div className="rounded-md border bg-muted/30 p-3 space-y-2">
-                <p className="text-xs font-medium">Before deleting, download a backup:</p>
+                <p className="text-xs font-medium">Optional: download a backup first</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -723,7 +723,7 @@ export function AdminSpecialties() {
                   {deleteSpecialty.isPending ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Deleting…</>
                   ) : (
-                    <><Trash2 className="h-4 w-4" /> Delete permanently</>
+                    <><Trash2 className="h-4 w-4" /> Move to trash</>
                   )}
                 </Button>
               </div>
