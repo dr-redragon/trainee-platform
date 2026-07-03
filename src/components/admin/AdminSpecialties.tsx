@@ -590,6 +590,73 @@ export function AdminSpecialties() {
         </div>
       )}
 
+      {deletedSpecialties.length > 0 && (
+        <div className="space-y-2 pt-4 border-t">
+          <div className="flex items-center gap-2">
+            <Archive className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold">Recently deleted</h3>
+            <Badge variant="secondary" className="text-[10px]">{deletedSpecialties.length}</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Deleted specialties are kept for {GRACE_PERIOD_DAYS} days before permanent removal. Restore or purge below.
+          </p>
+          <div className="space-y-1.5">
+            {deletedSpecialties.map((spec: any) => {
+              const days = daysRemaining(spec.deleted_at);
+              return (
+                <Card key={spec.id} className="opacity-80">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div
+                      className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: `hsl(${spec.color ?? "174 60% 40%"} / 0.15)` }}
+                    >
+                      {(() => { const Icon = getIcon(spec.icon_name ?? "Stethoscope"); return <Icon className="h-4 w-4" style={{ color: `hsl(${spec.color ?? "174 60% 40%"})` }} />; })()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">{spec.short_name}</span>
+                        {spec.parent_specialty_id && <Badge variant="outline" className="text-[10px]">Sub</Badge>}
+                        <Badge variant="secondary" className="text-[10px]">
+                          {days > 0 ? `${days}d left` : "Purging soon"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Deleted {new Date(spec.deleted_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={restoreSpecialty.isPending}
+                        onClick={() => restoreSpecialty.mutate(spec)}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" /> Restore
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        disabled={purgeSpecialty.isPending}
+                        onClick={() => {
+                          if (confirm(`Permanently delete "${spec.short_name}"? This cannot be undone.`)) {
+                            purgeSpecialty.mutate(spec);
+                          }
+                        }}
+                        title="Delete permanently now"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setConfirmText(""); } }}>
         <DialogContent>
           <DialogHeader>
