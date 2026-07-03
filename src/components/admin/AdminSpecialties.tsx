@@ -34,10 +34,21 @@ export function AdminSpecialties() {
   const [confirmText, setConfirmText] = useState("");
 
 
-  const { data: specialties, isLoading } = useQuery({
+  const GRACE_PERIOD_DAYS = 30;
+  const graceCutoff = () => new Date(Date.now() - GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: allRows, isLoading } = useQuery({
     queryKey: ["admin-specialties", activeDeanery?.id],
     queryFn: async () => {
       if (!activeDeanery) return [];
+      // Auto-purge anything past the grace window before listing
+      await supabase
+        .from("specialties")
+        .delete()
+        .eq("deanery_id", activeDeanery.id)
+        .not("deleted_at", "is", null)
+        .lt("deleted_at", graceCutoff());
+
       const { data, error } = await supabase
         .from("specialties")
         .select("*")
@@ -48,6 +59,9 @@ export function AdminSpecialties() {
     },
     enabled: !!activeDeanery,
   });
+
+  const specialties = allRows?.filter((s: any) => !s.deleted_at);
+  const deletedSpecialties = (allRows ?? []).filter((s: any) => !!s.deleted_at);
 
   // Source deanery specialties for cloning
   const { data: sourceSpecialties } = useQuery({
