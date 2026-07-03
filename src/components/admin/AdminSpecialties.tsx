@@ -292,37 +292,16 @@ export function AdminSpecialties() {
 
   const deleteSpecialty = useMutation({
     mutationFn: async (spec: any) => {
+      // Soft-delete: mark this specialty and any child specialties as deleted.
       const ids = collectSpecialtyIds(spec.id);
-
-      // Gather all storage paths so we can purge bucket objects (DB rows cascade-delete).
-      const { resources } = await fetchSpecialtyResources(spec.id);
-      const storagePaths = resources
-        .map((r: any) => (r.file_url ? extractStoragePath(r.file_url) : null))
-        .filter((p: string | null): p is string => !!p);
-
-      if (storagePaths.length > 0) {
-        // Storage `.remove` supports batches; chunk to be safe.
-        const chunkSize = 100;
-        for (let i = 0; i < storagePaths.length; i += chunkSize) {
-          const chunk = storagePaths.slice(i, i + chunkSize);
-          const { error } = await supabase.storage.from("resources").remove(chunk);
-          if (error) console.warn("Storage cleanup error:", error.message);
-        }
-      }
-
-      // Delete child specialties first (FK is SET NULL, not CASCADE, so do it manually).
-      const childIds = ids.filter((id) => id !== spec.id);
-      if (childIds.length > 0) {
-        const { error } = await supabase.from("specialties").delete().in("id", childIds);
-        if (error) throw error;
-      }
-
-      // Delete the specialty (cascades subsections → resources → folders).
-      const { error } = await supabase.from("specialties").delete().eq("id", spec.id);
+      const { error } = await supabase
+        .from("specialties")
+        .update({ deleted_at: new Date().toISOString() })
+        .in("id", ids);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Specialty deleted");
+      toast.success(`Specialty moved to trash — restorable for ${GRACE_PERIOD_DAYS} days`);
       queryClient.invalidateQueries({ queryKey: ["admin-specialties"] });
       queryClient.invalidateQueries({ queryKey: ["sidebar-specialties"] });
       queryClient.invalidateQueries({ queryKey: ["my-specialties"] });
@@ -331,6 +310,62 @@ export function AdminSpecialties() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const restoreSpecialty = useMutation({
+    mutationFn: async (spec: any) => {
+      const ids = collectSpecialtyIds(spec.id);
+      const { error } = await supabase
+        .from("specialties")
+        .update({ deleted_at: null })
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Specialty restored");
+      queryClient.invalidateQueries({ queryKey: ["admin-specialties"] });
+      queryClient.invalidateQueries({ queryKey: ["sidebar-specialties"] });
+      queryClient.invalidateQueries({ queryKey: ["my-specialties"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const purgeSpecialty = useMutation({
+    mutationFn: async (spec: any) => {
+      const ids = collectSpecialtyIds(spec.id);
+
+      const { resources } = await fetchSpecialtyResources(spec.id);
+      const storagePaths = resources
+        .map((r: any) => (r.file_url ? extractStoragePath(r.file_url) : null))
+        .filter((p: string | null): p is string => !!p);
+
+      if (storagePaths.length > 0) {
+        const chunkSize = 100;
+        for (let i = 0; i < storagePaths.length; i += chunkSize) {
+          const chunk = storagePaths.slice(i, i + chunkSize);
+          const { error } = await supabase.storage.from("resources").remove(chunk);
+          if (error) console.warn("Storage cleanup error:", error.message);
+        }
+      }
+
+      const childIds = ids.filter((id) => id !== spec.id);
+      if (childIds.length > 0) {
+        const { error } = await supabase.from("specialties").delete().in("id", childIds);
+        if (error) throw error;
+      }
+      const { error } = await supabase.from("specialties").delete().eq("id", spec.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Specialty permanently deleted");
+      queryClient.invalidateQueries({ queryKey: ["admin-specialties"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const daysRemaining = (deletedAt: string) => {
+    const diffMs = new Date(deletedAt).getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000 - Date.now();
+    return Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
+  };
 
   const otherDeaneries = allDeaneries.filter((d) => d.id !== activeDeanery?.id);
 
