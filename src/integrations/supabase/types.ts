@@ -676,6 +676,7 @@ export type Database = {
           color: string | null
           created_at: string
           deanery_id: string
+          deleted_at: string | null
           icon_name: string | null
           id: string
           is_active: boolean
@@ -690,6 +691,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           deanery_id?: string
+          deleted_at?: string | null
           icon_name?: string | null
           id?: string
           is_active?: boolean
@@ -704,6 +706,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           deanery_id?: string
+          deleted_at?: string | null
           icon_name?: string | null
           id?: string
           is_active?: boolean

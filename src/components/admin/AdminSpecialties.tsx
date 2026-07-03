@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Copy, ChevronRight, ChevronDown, Trash2, Download, Loader2 } from "lucide-react";
+import { Plus, Copy, ChevronRight, ChevronDown, Trash2, Download, Loader2, RotateCcw, Archive } from "lucide-react";
 import { getIcon } from "@/lib/iconMap";
 import { IconColorPicker } from "@/components/IconColorPicker";
 import { toast } from "sonner";
@@ -34,10 +34,21 @@ export function AdminSpecialties() {
   const [confirmText, setConfirmText] = useState("");
 
 
-  const { data: specialties, isLoading } = useQuery({
+  const GRACE_PERIOD_DAYS = 30;
+  const graceCutoff = () => new Date(Date.now() - GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: allRows, isLoading } = useQuery({
     queryKey: ["admin-specialties", activeDeanery?.id],
     queryFn: async () => {
       if (!activeDeanery) return [];
+      // Auto-purge anything past the grace window before listing
+      await supabase
+        .from("specialties")
+        .delete()
+        .eq("deanery_id", activeDeanery.id)
+        .not("deleted_at", "is", null)
+        .lt("deleted_at", graceCutoff());
+
       const { data, error } = await supabase
         .from("specialties")
         .select("*")
@@ -48,6 +59,9 @@ export function AdminSpecialties() {
     },
     enabled: !!activeDeanery,
   });
+
+  const specialties = allRows?.filter((s: any) => !s.deleted_at);
+  const deletedSpecialties = (allRows ?? []).filter((s: any) => !!s.deleted_at);
 
   // Source deanery specialties for cloning
   const { data: sourceSpecialties } = useQuery({
@@ -278,37 +292,16 @@ export function AdminSpecialties() {
 
   const deleteSpecialty = useMutation({
     mutationFn: async (spec: any) => {
+      // Soft-delete: mark this specialty and any child specialties as deleted.
       const ids = collectSpecialtyIds(spec.id);
-
-      // Gather all storage paths so we can purge bucket objects (DB rows cascade-delete).
-      const { resources } = await fetchSpecialtyResources(spec.id);
-      const storagePaths = resources
-        .map((r: any) => (r.file_url ? extractStoragePath(r.file_url) : null))
-        .filter((p: string | null): p is string => !!p);
-
-      if (storagePaths.length > 0) {
-        // Storage `.remove` supports batches; chunk to be safe.
-        const chunkSize = 100;
-        for (let i = 0; i < storagePaths.length; i += chunkSize) {
-          const chunk = storagePaths.slice(i, i + chunkSize);
-          const { error } = await supabase.storage.from("resources").remove(chunk);
-          if (error) console.warn("Storage cleanup error:", error.message);
-        }
-      }
-
-      // Delete child specialties first (FK is SET NULL, not CASCADE, so do it manually).
-      const childIds = ids.filter((id) => id !== spec.id);
-      if (childIds.length > 0) {
-        const { error } = await supabase.from("specialties").delete().in("id", childIds);
-        if (error) throw error;
-      }
-
-      // Delete the specialty (cascades subsections → resources → folders).
-      const { error } = await supabase.from("specialties").delete().eq("id", spec.id);
+      const { error } = await supabase
+        .from("specialties")
+        .update({ deleted_at: new Date().toISOString() })
+        .in("id", ids);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Specialty deleted");
+      toast.success(`Specialty moved to trash — restorable for ${GRACE_PERIOD_DAYS} days`);
       queryClient.invalidateQueries({ queryKey: ["admin-specialties"] });
       queryClient.invalidateQueries({ queryKey: ["sidebar-specialties"] });
       queryClient.invalidateQueries({ queryKey: ["my-specialties"] });
@@ -317,6 +310,62 @@ export function AdminSpecialties() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const restoreSpecialty = useMutation({
+    mutationFn: async (spec: any) => {
+      const ids = collectSpecialtyIds(spec.id);
+      const { error } = await supabase
+        .from("specialties")
+        .update({ deleted_at: null })
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Specialty restored");
+      queryClient.invalidateQueries({ queryKey: ["admin-specialties"] });
+      queryClient.invalidateQueries({ queryKey: ["sidebar-specialties"] });
+      queryClient.invalidateQueries({ queryKey: ["my-specialties"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const purgeSpecialty = useMutation({
+    mutationFn: async (spec: any) => {
+      const ids = collectSpecialtyIds(spec.id);
+
+      const { resources } = await fetchSpecialtyResources(spec.id);
+      const storagePaths = resources
+        .map((r: any) => (r.file_url ? extractStoragePath(r.file_url) : null))
+        .filter((p: string | null): p is string => !!p);
+
+      if (storagePaths.length > 0) {
+        const chunkSize = 100;
+        for (let i = 0; i < storagePaths.length; i += chunkSize) {
+          const chunk = storagePaths.slice(i, i + chunkSize);
+          const { error } = await supabase.storage.from("resources").remove(chunk);
+          if (error) console.warn("Storage cleanup error:", error.message);
+        }
+      }
+
+      const childIds = ids.filter((id) => id !== spec.id);
+      if (childIds.length > 0) {
+        const { error } = await supabase.from("specialties").delete().in("id", childIds);
+        if (error) throw error;
+      }
+      const { error } = await supabase.from("specialties").delete().eq("id", spec.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Specialty permanently deleted");
+      queryClient.invalidateQueries({ queryKey: ["admin-specialties"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const daysRemaining = (deletedAt: string) => {
+    const diffMs = new Date(deletedAt).getTime() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000 - Date.now();
+    return Math.max(0, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
+  };
 
   const otherDeaneries = allDeaneries.filter((d) => d.id !== activeDeanery?.id);
 
@@ -541,6 +590,73 @@ export function AdminSpecialties() {
         </div>
       )}
 
+      {deletedSpecialties.length > 0 && (
+        <div className="space-y-2 pt-4 border-t">
+          <div className="flex items-center gap-2">
+            <Archive className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold">Recently deleted</h3>
+            <Badge variant="secondary" className="text-[10px]">{deletedSpecialties.length}</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Deleted specialties are kept for {GRACE_PERIOD_DAYS} days before permanent removal. Restore or purge below.
+          </p>
+          <div className="space-y-1.5">
+            {deletedSpecialties.map((spec: any) => {
+              const days = daysRemaining(spec.deleted_at);
+              return (
+                <Card key={spec.id} className="opacity-80">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div
+                      className="h-9 w-9 rounded-md flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: `hsl(${spec.color ?? "174 60% 40%"} / 0.15)` }}
+                    >
+                      {(() => { const Icon = getIcon(spec.icon_name ?? "Stethoscope"); return <Icon className="h-4 w-4" style={{ color: `hsl(${spec.color ?? "174 60% 40%"})` }} />; })()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">{spec.short_name}</span>
+                        {spec.parent_specialty_id && <Badge variant="outline" className="text-[10px]">Sub</Badge>}
+                        <Badge variant="secondary" className="text-[10px]">
+                          {days > 0 ? `${days}d left` : "Purging soon"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Deleted {new Date(spec.deleted_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        disabled={restoreSpecialty.isPending}
+                        onClick={() => restoreSpecialty.mutate(spec)}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" /> Restore
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        disabled={purgeSpecialty.isPending}
+                        onClick={() => {
+                          if (confirm(`Permanently delete "${spec.short_name}"? This cannot be undone.`)) {
+                            purgeSpecialty.mutate(spec);
+                          }
+                        }}
+                        title="Delete permanently now"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) { setDeleteTarget(null); setConfirmText(""); } }}>
         <DialogContent>
           <DialogHeader>
@@ -551,23 +667,23 @@ export function AdminSpecialties() {
           {deleteTarget && (
             <div className="space-y-4 pt-2 text-sm">
               <p>
-                You are about to permanently delete{" "}
+                You are about to delete{" "}
                 <span className="font-semibold">{deleteTarget.short_name}</span>
                 {" "}from <span className="font-medium">{activeDeanery?.name}</span>.
               </p>
-              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 space-y-1.5 text-xs">
-                <p className="font-medium text-destructive">This will permanently remove:</p>
-                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-                  <li>All sections, folders, and resources within this specialty</li>
-                  <li>All uploaded files in storage</li>
-                  <li>Any subspecialties beneath it</li>
-                  <li>Notices, discussions, and trainee/facilitator assignments</li>
-                </ul>
-                <p className="text-destructive font-medium pt-1">This action cannot be undone.</p>
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 space-y-1.5 text-xs">
+                <p className="font-medium text-amber-700 dark:text-amber-400">
+                  Grace period: {GRACE_PERIOD_DAYS} days
+                </p>
+                <p className="text-muted-foreground">
+                  The specialty (and any subspecialties beneath it) will be hidden from trainees, facilitators, and the public site immediately, but kept in a
+                  <span className="font-medium"> Recently deleted </span>
+                  list so an admin can restore it. After {GRACE_PERIOD_DAYS} days it — along with all sections, folders, resources, and uploaded files — is permanently purged.
+                </p>
               </div>
 
               <div className="rounded-md border bg-muted/30 p-3 space-y-2">
-                <p className="text-xs font-medium">Before deleting, download a backup:</p>
+                <p className="text-xs font-medium">Optional: download a backup first</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -607,7 +723,7 @@ export function AdminSpecialties() {
                   {deleteSpecialty.isPending ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Deleting…</>
                   ) : (
-                    <><Trash2 className="h-4 w-4" /> Delete permanently</>
+                    <><Trash2 className="h-4 w-4" /> Move to trash</>
                   )}
                 </Button>
               </div>
