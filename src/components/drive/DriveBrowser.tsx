@@ -20,7 +20,7 @@ import {
 import { Label } from "@/components/ui/label";
 import {
   ChevronRight, FolderPlus, ListPlus, Upload, Plus, X, Trash2, Download,
-  FolderInput, CheckSquare, FolderClosed, FileText, MoreVertical,
+  FolderInput, CheckSquare, FolderClosed, FileText, MoreVertical, ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { FileRow, FolderRow } from "@/components/drive/DriveRow";
