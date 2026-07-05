@@ -681,6 +681,17 @@ export function DriveBrowser({
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap">
+        {currentFolder && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 text-xs -ml-2"
+            onClick={() => { setCurrentFolderId(null); clearSelection(); }}
+            aria-label="Back to previous view"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
+          </Button>
+        )}
         <Breadcrumb
           subsectionName={subsection.name}
           currentFolderName={currentFolder?.name ?? null}
