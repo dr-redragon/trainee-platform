@@ -573,9 +573,10 @@ export function DriveBrowser({
                   count={resources.filter((r) => (r as any).folder_id === f.id).length}
                   selected={selection.has(`folder-row:${f.id}`)}
                   onClick={(e) => {
-                if (e.shiftKey || e.metaKey || e.ctrlKey) { handleRowClick(`folder-row:${f.id}`, e); return; }
-                setCurrentFolderId(f.id); clearSelection();
-              }}
+                    if (e.shiftKey || e.metaKey || e.ctrlKey) { handleRowClick(`folder-row:${f.id}`, e); return; }
+                    if (selection.size > 0) { handleRowClick(`folder-row:${f.id}`, e); return; }
+                    setCurrentFolderId(f.id); clearSelection();
+                  }}
                   canManage={canManage}
                   onOpen={() => { setCurrentFolderId(f.id); clearSelection(); }}
                   onRename={() => { setRenameFolderId(f.id); setRenameFolderName(f.name); }}
