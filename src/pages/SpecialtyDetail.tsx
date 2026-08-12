@@ -95,6 +95,40 @@ const SpecialtyDetail = () => {
   const [activeDragResourceId, setActiveDragResourceId] = useState<string | null>(null);
   const [activeDragTargetId, setActiveDragTargetId] = useState<string | null>(null);
 
+  const tabsListRef = useRef<HTMLDivElement>(null);
+  const [tabsScroll, setTabsScroll] = useState({
+    left: 0,
+    canScrollLeft: false,
+    canScrollRight: false,
+  });
+
+  const updateTabsScroll = () => {
+    const el = tabsListRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setTabsScroll({
+      left: el.scrollLeft,
+      canScrollLeft: el.scrollLeft > 2,
+      canScrollRight: el.scrollLeft < maxScroll - 2 && maxScroll > 2,
+    });
+  };
+
+  useEffect(() => {
+    updateTabsScroll();
+    const el = tabsListRef.current;
+    if (!el) return;
+    const onScroll = () => updateTabsScroll();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", updateTabsScroll);
+    const observer = new MutationObserver(updateTabsScroll);
+    observer.observe(el, { childList: true, subtree: true });
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", updateTabsScroll);
+      observer.disconnect();
+    };
+  }, []);
+
   const toggleSelectResource = (id: string) => {
     setSelectedResourceIds((prev) => {
       const next = new Set(prev);
