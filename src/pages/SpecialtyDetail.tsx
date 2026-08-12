@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useLocation, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { ContactCard } from "@/components/ContactCard";
@@ -25,7 +26,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2, ListPlus, CheckSquare } from "lucide-react";
+import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2, ListPlus, CheckSquare, ChevronLeft, ChevronRight } from "lucide-react";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { UploadProgressBar } from "@/components/UploadProgressBar";
 import { FileDropOverlay } from "@/components/FileDropOverlay";
@@ -94,6 +95,40 @@ const SpecialtyDetail = () => {
   const [bulkDownloading, setBulkDownloading] = useState(false);
   const [activeDragResourceId, setActiveDragResourceId] = useState<string | null>(null);
   const [activeDragTargetId, setActiveDragTargetId] = useState<string | null>(null);
+
+  const tabsListRef = useRef<HTMLDivElement>(null);
+  const [tabsScroll, setTabsScroll] = useState({
+    left: 0,
+    canScrollLeft: false,
+    canScrollRight: false,
+  });
+
+  const updateTabsScroll = () => {
+    const el = tabsListRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setTabsScroll({
+      left: el.scrollLeft,
+      canScrollLeft: el.scrollLeft > 2,
+      canScrollRight: el.scrollLeft < maxScroll - 2 && maxScroll > 2,
+    });
+  };
+
+  useEffect(() => {
+    updateTabsScroll();
+    const el = tabsListRef.current;
+    if (!el) return;
+    const onScroll = () => updateTabsScroll();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", updateTabsScroll);
+    const observer = new MutationObserver(updateTabsScroll);
+    observer.observe(el, { childList: true, subtree: true });
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", updateTabsScroll);
+      observer.disconnect();
+    };
+  }, []);
 
   const toggleSelectResource = (id: string) => {
     setSelectedResourceIds((prev) => {
@@ -672,29 +707,79 @@ const SpecialtyDetail = () => {
 
         <Tabs value={activeTab ?? defaultTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex items-center gap-2">
-            <TabsList className="flex-1 justify-start h-auto bg-secondary/50 p-1 tabs-scrollbar">
-              {canManage && subsections?.length ? (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSubsectionDragEnd}>
-                  <SortableContext items={subsections.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
-                    {subsections.map((sub) => (
-                      <SortableTabTrigger key={sub.id} id={sub.id} value={sub.name} canDrag>
-                        {sub.name}
-                      </SortableTabTrigger>
-                    ))}
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                subsections?.map((sub) => (
-                  <TabsTrigger key={sub.id} value={sub.name} className="text-xs whitespace-nowrap">
-                    {sub.name}
-                  </TabsTrigger>
-                ))
-              )}
-              <TabsTrigger value="Key Contacts" className="text-xs whitespace-nowrap">
-                <Users className="h-3 w-3 mr-1" />
-                Key Contacts
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex-1 relative overflow-hidden rounded-md">
+              <TabsList
+                ref={tabsListRef}
+                className={cn(
+                  "w-full justify-start h-auto bg-secondary/50 p-1 tabs-scrollbar",
+                  tabsScroll.canScrollLeft ? "tabs-fade-both" : "tabs-fade-right"
+                )}
+              >
+                {canManage && subsections?.length ? (
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSubsectionDragEnd}>
+                    <SortableContext items={subsections.map((s) => s.id)} strategy={horizontalListSortingStrategy}>
+                      {subsections.map((sub) => (
+                        <SortableTabTrigger key={sub.id} id={sub.id} value={sub.name} canDrag>
+                          {sub.name}
+                        </SortableTabTrigger>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                ) : (
+                  subsections?.map((sub) => (
+                    <TabsTrigger key={sub.id} value={sub.name} className="text-xs whitespace-nowrap">
+                      {sub.name}
+                    </TabsTrigger>
+                  ))
+                )}
+                <TabsTrigger value="Key Contacts" className="text-xs whitespace-nowrap">
+                  <Users className="h-3 w-3 mr-1" />
+                  Key Contacts
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Overflow hint gradients */}
+              <div
+                className={cn(
+                  "pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-secondary/90 to-transparent transition-opacity duration-200",
+                  tabsScroll.canScrollRight ? "opacity-100" : "opacity-0"
+                )}
+                aria-hidden="true"
+              />
+              <div
+                className={cn(
+                  "pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-secondary/90 to-transparent transition-opacity duration-200",
+                  tabsScroll.canScrollLeft ? "opacity-100" : "opacity-0"
+                )}
+                aria-hidden="true"
+              />
+
+              {/* Scroll hint buttons */}
+              <button
+                type="button"
+                onClick={() => tabsListRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
+                className={cn(
+                  "absolute left-1 top-1/2 -translate-y-1/2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-background/90 shadow-sm border border-border text-muted-foreground transition-opacity duration-200 hover:text-foreground",
+                  tabsScroll.canScrollLeft ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}
+                aria-hidden={!tabsScroll.canScrollLeft}
+                tabIndex={-1}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => tabsListRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
+                className={cn(
+                  "absolute right-1 top-1/2 -translate-y-1/2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-background/90 shadow-sm border border-border text-muted-foreground transition-opacity duration-200 hover:text-foreground",
+                  tabsScroll.canScrollRight ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}
+                aria-hidden={!tabsScroll.canScrollRight}
+                tabIndex={-1}
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
             {canManage && (
               <Button
                 variant="outline"
