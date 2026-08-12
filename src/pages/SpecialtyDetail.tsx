@@ -25,7 +25,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2, ListPlus, CheckSquare } from "lucide-react";
+import { Users, MessageSquare, FolderOpen, Plus, MoreVertical, Pencil, Trash2, ListPlus, CheckSquare, ChevronLeft, ChevronRight } from "lucide-react";
 import { BulkActionBar } from "@/components/BulkActionBar";
 import { UploadProgressBar } from "@/components/UploadProgressBar";
 import { FileDropOverlay } from "@/components/FileDropOverlay";
