@@ -710,7 +710,10 @@ const SpecialtyDetail = () => {
             <div className="flex-1 relative overflow-hidden rounded-md">
               <TabsList
                 ref={tabsListRef}
-                className="w-full justify-start h-auto bg-secondary/50 p-1 tabs-scrollbar tabs-fade-right"
+                className={cn(
+                  "w-full justify-start h-auto bg-secondary/50 p-1 tabs-scrollbar",
+                  tabsScroll.canScrollLeft ? "tabs-fade-both" : "tabs-fade-right"
+                )}
               >
                 {canManage && subsections?.length ? (
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSubsectionDragEnd}>
