@@ -168,6 +168,14 @@ export function DriveBrowser({
       setLastClickedId(id);
       return;
     }
+    // Once selection mode is active, plain clicks add/remove items instead of clearing.
+    if (selection.size > 0) {
+      const next = new Set(selection);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      setSelection(next);
+      setLastClickedId(id);
+      return;
+    }
     setSelection(new Set([id]));
     setLastClickedId(id);
   };
