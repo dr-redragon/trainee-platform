@@ -174,6 +174,9 @@ export function DriveBrowser({
 
   const clearSelection = () => setSelection(new Set());
 
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selection.has(id));
+
   const selectedFiles = useMemo(
     () => resources.filter((r) => selection.has(r.id)),
     [resources, selection]
@@ -512,7 +515,10 @@ export function DriveBrowser({
               folder={f}
               count={resources.filter((r) => (r as any).folder_id === f.id).length}
               selected={selection.has(`folder-row:${f.id}`)}
-              onClick={(e) => handleRowClick(`folder-row:${f.id}`, e)}
+              onClick={(e) => {
+                if (e.shiftKey || e.metaKey || e.ctrlKey) { handleRowClick(`folder-row:${f.id}`, e); return; }
+                setCurrentFolderId(f.id); clearSelection();
+              }}
               canManage={canManage}
               onOpen={() => { setCurrentFolderId(f.id); clearSelection(); }}
               onRename={() => { setRenameFolderId(f.id); setRenameFolderName(f.name); }}
@@ -565,7 +571,10 @@ export function DriveBrowser({
                   folder={f}
                   count={resources.filter((r) => (r as any).folder_id === f.id).length}
                   selected={selection.has(`folder-row:${f.id}`)}
-                  onClick={(e) => handleRowClick(`folder-row:${f.id}`, e)}
+                  onClick={(e) => {
+                if (e.shiftKey || e.metaKey || e.ctrlKey) { handleRowClick(`folder-row:${f.id}`, e); return; }
+                setCurrentFolderId(f.id); clearSelection();
+              }}
                   canManage={canManage}
                   onOpen={() => { setCurrentFolderId(f.id); clearSelection(); }}
                   onRename={() => { setRenameFolderId(f.id); setRenameFolderName(f.name); }}
@@ -699,6 +708,19 @@ export function DriveBrowser({
           activeDropId={activeDropId}
         />
         <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+          {visibleIds.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() =>
+                allVisibleSelected ? clearSelection() : setSelection(new Set(visibleIds))
+              }
+            >
+              <CheckSquare className="h-3.5 w-3.5" />
+              {allVisibleSelected ? "Deselect all" : "Select all"}
+            </Button>
+          )}
           {canManage && (
             <>
               <DropdownMenu>
