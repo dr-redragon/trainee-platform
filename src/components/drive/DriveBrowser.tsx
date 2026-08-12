@@ -517,6 +517,7 @@ export function DriveBrowser({
               selected={selection.has(`folder-row:${f.id}`)}
               onClick={(e) => {
                 if (e.shiftKey || e.metaKey || e.ctrlKey) { handleRowClick(`folder-row:${f.id}`, e); return; }
+                if (selection.size > 0) { handleRowClick(`folder-row:${f.id}`, e); return; }
                 setCurrentFolderId(f.id); clearSelection();
               }}
               canManage={canManage}
