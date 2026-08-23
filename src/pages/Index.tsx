@@ -87,7 +87,8 @@ const Index = () => {
   const { activeDeanery } = useDeanery();
   const [isEditing, setIsEditing] = useState(false);
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
-  const { layout, hiddenWidgets, columns, rightColumnWidgets, savePrefs } = useDashboardPreferences();
+  const [settingsWidget, setSettingsWidget] = useState<WidgetId | null>(null);
+  const { layout, hiddenWidgets, columns, rightColumnWidgets, widgetSettings, savePrefs } = useDashboardPreferences();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
