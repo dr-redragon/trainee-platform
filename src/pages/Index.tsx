@@ -248,6 +248,15 @@ const Index = () => {
         <CardContent className="flex items-center justify-between p-3">
           <span className="text-sm font-medium">{WIDGET_LABELS[widgetId]}</span>
           <div className="flex items-center gap-1.5">
+            {widgetId === "file_browser" && (
+              <button
+                onClick={() => setSettingsWidget("file_browser")}
+                className="h-5 w-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center hover:scale-110 hover:bg-primary/20 hover:text-primary transition-all"
+                title="Choose default folder"
+              >
+                <Cog className="h-3 w-3" />
+              </button>
+            )}
             {columns === 2 && (
               <button
                 onClick={() => moveToOtherColumn(widgetId)}
