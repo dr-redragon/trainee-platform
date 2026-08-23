@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Clock, Megaphone, FileText, Video, LinkIcon, BookOpen, CheckSquare,
   FolderOpen, ChevronRight, Settings2, GripVertical, Eye, EyeOff, X, Columns2, Rows3,
-  ArrowLeftRight,
+  ArrowLeftRight, Cog,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +20,8 @@ import { WatchedDiscussionsWidget } from "@/components/dashboard/WatchedDiscussi
 import { StarredContactsWidget } from "@/components/dashboard/StarredContactsWidget";
 import { SpecialtiesWidget } from "@/components/dashboard/SpecialtiesWidget";
 import { RecentResourcesWidget } from "@/components/dashboard/RecentResourcesWidget";
+import { FileBrowserWidget } from "@/components/dashboard/FileBrowserWidget";
+import { FileBrowserWidgetSettings } from "@/components/dashboard/FileBrowserWidgetSettings";
 import {
   DndContext, closestCenter, pointerWithin, rectIntersection,
   PointerSensor, KeyboardSensor, useSensor, useSensors,
@@ -32,6 +34,7 @@ import { CSS } from "@dnd-kit/utilities";
 const WIDGET_LABELS: Record<WidgetId, string> = {
   announcements: "Announcements",
   specialties: "Your Specialties",
+  file_browser: "Quick Files",
   bookmarks: "Bookmarked Resources",
   recent_resources: "Recently Added",
   watched_discussions: "Watched Discussions",
@@ -84,7 +87,8 @@ const Index = () => {
   const { activeDeanery } = useDeanery();
   const [isEditing, setIsEditing] = useState(false);
   const [activeId, setActiveId] = useState<WidgetId | null>(null);
-  const { layout, hiddenWidgets, columns, rightColumnWidgets, savePrefs } = useDashboardPreferences();
+  const [settingsWidget, setSettingsWidget] = useState<WidgetId | null>(null);
+  const { layout, hiddenWidgets, columns, rightColumnWidgets, widgetSettings, savePrefs } = useDashboardPreferences();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -223,6 +227,8 @@ const Index = () => {
         return <WatchedDiscussionsWidget />;
       case "contacts":
         return <StarredContactsWidget />;
+      case "file_browser":
+        return <FileBrowserWidget settings={widgetSettings.file_browser} />;
       default:
         return null;
     }
@@ -242,6 +248,15 @@ const Index = () => {
         <CardContent className="flex items-center justify-between p-3">
           <span className="text-sm font-medium">{WIDGET_LABELS[widgetId]}</span>
           <div className="flex items-center gap-1.5">
+            {widgetId === "file_browser" && (
+              <button
+                onClick={() => setSettingsWidget("file_browser")}
+                className="h-5 w-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center hover:scale-110 hover:bg-primary/20 hover:text-primary transition-all"
+                title="Choose default folder"
+              >
+                <Cog className="h-3 w-3" />
+              </button>
+            )}
             {columns === 2 && (
               <button
                 onClick={() => moveToOtherColumn(widgetId)}
@@ -419,6 +434,13 @@ const Index = () => {
             ) : null}
           </DragOverlay>
         </DndContext>
+
+        <FileBrowserWidgetSettings
+          open={settingsWidget === "file_browser"}
+          onOpenChange={(o) => setSettingsWidget(o ? "file_browser" : null)}
+          value={widgetSettings.file_browser}
+          onSave={(v) => savePrefs.mutate({ widget_settings: { ...widgetSettings, file_browser: v } })}
+        />
       </div>
     </DashboardLayout>
   );

@@ -291,6 +291,7 @@ export type Database = {
           updated_at: string
           user_id: string
           widget_layout: Json
+          widget_settings: Json
         }
         Insert: {
           columns?: number
@@ -301,6 +302,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           widget_layout?: Json
+          widget_settings?: Json
         }
         Update: {
           columns?: number
@@ -311,6 +313,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           widget_layout?: Json
+          widget_settings?: Json
         }
         Relationships: []
       }
