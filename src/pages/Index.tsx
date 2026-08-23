@@ -434,6 +434,13 @@ const Index = () => {
             ) : null}
           </DragOverlay>
         </DndContext>
+
+        <FileBrowserWidgetSettings
+          open={settingsWidget === "file_browser"}
+          onOpenChange={(o) => setSettingsWidget(o ? "file_browser" : null)}
+          value={widgetSettings.file_browser}
+          onSave={(v) => savePrefs.mutate({ widget_settings: { ...widgetSettings, file_browser: v } })}
+        />
       </div>
     </DashboardLayout>
   );
