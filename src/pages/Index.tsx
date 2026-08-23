@@ -227,6 +227,8 @@ const Index = () => {
         return <WatchedDiscussionsWidget />;
       case "contacts":
         return <StarredContactsWidget />;
+      case "file_browser":
+        return <FileBrowserWidget settings={widgetSettings.file_browser} />;
       default:
         return null;
     }
