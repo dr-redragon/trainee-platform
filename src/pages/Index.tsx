@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Clock, Megaphone, FileText, Video, LinkIcon, BookOpen, CheckSquare,
   FolderOpen, ChevronRight, Settings2, GripVertical, Eye, EyeOff, X, Columns2, Rows3,
-  ArrowLeftRight,
+  ArrowLeftRight, Cog,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +20,8 @@ import { WatchedDiscussionsWidget } from "@/components/dashboard/WatchedDiscussi
 import { StarredContactsWidget } from "@/components/dashboard/StarredContactsWidget";
 import { SpecialtiesWidget } from "@/components/dashboard/SpecialtiesWidget";
 import { RecentResourcesWidget } from "@/components/dashboard/RecentResourcesWidget";
+import { FileBrowserWidget } from "@/components/dashboard/FileBrowserWidget";
+import { FileBrowserWidgetSettings } from "@/components/dashboard/FileBrowserWidgetSettings";
 import {
   DndContext, closestCenter, pointerWithin, rectIntersection,
   PointerSensor, KeyboardSensor, useSensor, useSensors,
@@ -32,6 +34,7 @@ import { CSS } from "@dnd-kit/utilities";
 const WIDGET_LABELS: Record<WidgetId, string> = {
   announcements: "Announcements",
   specialties: "Your Specialties",
+  file_browser: "Quick Files",
   bookmarks: "Bookmarked Resources",
   recent_resources: "Recently Added",
   watched_discussions: "Watched Discussions",
