@@ -8,11 +8,21 @@ export type WidgetId =
   | "bookmarks"
   | "recent_resources"
   | "watched_discussions"
-  | "contacts";
+  | "contacts"
+  | "file_browser";
+
+export interface WidgetSettings {
+  file_browser?: {
+    specialtyId?: string | null;
+    subsectionId?: string | null;
+    folderId?: string | null;
+  };
+}
 
 const DEFAULT_LAYOUT: WidgetId[] = [
   "announcements",
   "specialties",
+  "file_browser",
   "bookmarks",
   "recent_resources",
   "watched_discussions",
@@ -38,10 +48,15 @@ export function useDashboardPreferences() {
     enabled: !!user,
   });
 
-  const layout: WidgetId[] = (prefs?.widget_layout as WidgetId[] | null) ?? DEFAULT_LAYOUT;
+  const storedLayout = (prefs?.widget_layout as WidgetId[] | null) ?? null;
+  // Ensure newly added widgets appear for users with an existing saved layout
+  const layout: WidgetId[] = storedLayout
+    ? [...storedLayout, ...DEFAULT_LAYOUT.filter((w) => !storedLayout.includes(w))]
+    : DEFAULT_LAYOUT;
   const hiddenWidgets: WidgetId[] = (prefs?.hidden_widgets as WidgetId[] | null) ?? [];
   const columns: 1 | 2 = ((prefs as any)?.columns === 2 ? 2 : 1);
   const rightColumnWidgets: WidgetId[] = ((prefs as any)?.right_column_widgets as WidgetId[] | null) ?? [];
+  const widgetSettings: WidgetSettings = ((prefs as any)?.widget_settings as WidgetSettings | null) ?? {};
 
   const savePrefs = useMutation({
     mutationFn: async (update: {
@@ -49,6 +64,7 @@ export function useDashboardPreferences() {
       hidden_widgets?: WidgetId[];
       columns?: 1 | 2;
       right_column_widgets?: WidgetId[];
+      widget_settings?: WidgetSettings;
     }) => {
       if (!user) return;
       const payload = {
@@ -57,6 +73,7 @@ export function useDashboardPreferences() {
         hidden_widgets: update.hidden_widgets ?? hiddenWidgets,
         columns: update.columns ?? columns,
         right_column_widgets: update.right_column_widgets ?? rightColumnWidgets,
+        widget_settings: (update.widget_settings ?? widgetSettings) as any,
       };
       const { error } = await supabase
         .from("dashboard_preferences")
@@ -66,5 +83,5 @@ export function useDashboardPreferences() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["dashboard-preferences"] }),
   });
 
-  return { layout, hiddenWidgets, columns, rightColumnWidgets, isLoading, savePrefs };
+  return { layout, hiddenWidgets, columns, rightColumnWidgets, widgetSettings, isLoading, savePrefs };
 }
