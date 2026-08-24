@@ -228,7 +228,12 @@ const Index = () => {
       case "contacts":
         return <StarredContactsWidget />;
       case "file_browser":
-        return <FileBrowserWidget settings={widgetSettings.file_browser} />;
+        return (
+          <FileBrowserWidget
+            settings={widgetSettings.file_browser}
+            onOpenSettings={() => setSettingsWidget("file_browser")}
+          />
+        );
       default:
         return null;
     }

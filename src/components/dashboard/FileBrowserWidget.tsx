@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDeanery } from "@/contexts/DeaneryContext";
 import {
-  ArrowLeft, ChevronRight, File, FileText, Folder, HardDrive, Link as LinkIcon, Video,
+  ArrowLeft, ChevronRight, File, FileText, Folder, HardDrive, Link as LinkIcon, Settings2, Video,
 } from "lucide-react";
 
 export interface FileWidgetSettings {
@@ -23,7 +23,13 @@ function typeIcon(type: string) {
   return File;
 }
 
-export function FileBrowserWidget({ settings }: { settings?: FileWidgetSettings }) {
+export function FileBrowserWidget({
+  settings,
+  onOpenSettings,
+}: {
+  settings?: FileWidgetSettings;
+  onOpenSettings?: () => void;
+}) {
   const { activeDeanery } = useDeanery();
 
   const { data: specialties } = useQuery({
@@ -105,14 +111,28 @@ export function FileBrowserWidget({ settings }: { settings?: FileWidgetSettings 
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <HardDrive className="h-4 w-4 text-primary" />
           Quick Files
-          {effectiveSpecialty && (
-            <Link
-              to={`/specialty/${effectiveSpecialty}`}
-              className="ml-auto text-xs font-normal text-muted-foreground hover:text-primary"
-            >
-              Open full view
-            </Link>
-          )}
+          <div className="ml-auto flex items-center gap-1">
+            {effectiveSpecialty && (
+              <Link
+                to={`/specialty/${effectiveSpecialty}`}
+                className="text-xs font-normal text-muted-foreground hover:text-primary"
+              >
+                Open full view
+              </Link>
+            )}
+            {onOpenSettings && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                onClick={onOpenSettings}
+                aria-label="Quick Files settings"
+                title="Quick Files settings"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
