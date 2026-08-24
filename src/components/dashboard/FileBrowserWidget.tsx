@@ -23,7 +23,13 @@ function typeIcon(type: string) {
   return File;
 }
 
-export function FileBrowserWidget({ settings }: { settings?: FileWidgetSettings }) {
+export function FileBrowserWidget({
+  settings,
+  onOpenSettings,
+}: {
+  settings?: FileWidgetSettings;
+  onOpenSettings?: () => void;
+}) {
   const { activeDeanery } = useDeanery();
 
   const { data: specialties } = useQuery({
