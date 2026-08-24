@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -67,7 +68,9 @@ const SpecialtyDetail = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { data: canManage } = useCanManageSpecialty(id);
+  const { data: hasEditRights } = useCanManageSpecialty(id);
+  const [editMode, setEditMode] = useState(false);
+  const canManage = !!hasEditRights && editMode;
   const discussionRef = useRef<HTMLDivElement>(null);
 
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -696,10 +699,21 @@ const SpecialtyDetail = () => {
             <h1 className="text-2xl font-display font-bold">{specialty.short_name}</h1>
             <p className="text-sm text-muted-foreground">{specialty.name}</p>
           </div>
-          {canManage && (
-            <Badge variant="outline" className="ml-auto text-[10px] text-accent border-accent/30">
-              ✏️ Editing enabled
-            </Badge>
+          {hasEditRights && (
+            <div className="ml-auto flex items-center gap-2 rounded-md border px-3 py-1.5">
+              <Switch
+                id="edit-mode"
+                checked={editMode}
+                onCheckedChange={setEditMode}
+                aria-label="Toggle edit mode"
+              />
+              <Label
+                htmlFor="edit-mode"
+                className={cn("text-xs cursor-pointer", editMode ? "text-accent" : "text-muted-foreground")}
+              >
+                {editMode ? "✏️ Editing enabled" : "Editing off"}
+              </Label>
+            </div>
           )}
         </div>
 
