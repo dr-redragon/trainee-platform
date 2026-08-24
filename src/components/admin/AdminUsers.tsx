@@ -184,26 +184,25 @@ export function AdminUsers() {
 
   const inviteUser = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.auth.signUp({
-        email: inviteEmail,
-        password: crypto.randomUUID().slice(0, 16) + "Aa1!",
-        options: {
-          data: { first_name: inviteFirst, last_name: inviteLast },
-          emailRedirectTo: window.location.origin,
+      const { data, error } = await supabase.functions.invoke("invite-user", {
+        body: {
+          email: inviteEmail,
+          first_name: inviteFirst,
+          last_name: inviteLast,
+          role: inviteRole,
+          redirect_to: `${window.location.origin}/reset-password`,
         },
       });
       if (error) throw error;
-      if (inviteRole !== "trainee" && data.user) {
-        await new Promise((r) => setTimeout(r, 500));
-        if (inviteRole === "admin") {
-          await supabase.from("user_roles").insert({ user_id: data.user.id, role: "admin" });
-        } else if (inviteRole === "facilitator") {
-          await supabase.from("user_roles").insert({ user_id: data.user.id, role: "facilitator" });
-        }
-      }
+      if (data?.error) throw new Error(data.error);
+      return data as { email_sent?: boolean };
     },
-    onSuccess: () => {
-      toast.success("Invitation sent");
+    onSuccess: (data) => {
+      toast.success(
+        data?.email_sent === false
+          ? "User created, but the invitation email could not be sent"
+          : "Invitation sent",
+      );
       setInviteOpen(false);
       setInviteEmail("");
       setInviteFirst("");
@@ -214,6 +213,7 @@ export function AdminUsers() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const deleteUser = useMutation({
     mutationFn: async (userId: string) => {
