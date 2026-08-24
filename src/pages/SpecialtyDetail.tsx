@@ -67,7 +67,9 @@ const SpecialtyDetail = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { data: canManage } = useCanManageSpecialty(id);
+  const { data: hasEditRights } = useCanManageSpecialty(id);
+  const [editMode, setEditMode] = useState(false);
+  const canManage = !!hasEditRights && editMode;
   const discussionRef = useRef<HTMLDivElement>(null);
 
   const [activeTab, setActiveTab] = useState<string | null>(null);
