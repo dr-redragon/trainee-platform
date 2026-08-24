@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDeanery } from "@/contexts/DeaneryContext";
 import {
-  ArrowLeft, ChevronRight, File, FileText, Folder, HardDrive, Link as LinkIcon, Video,
+  ArrowLeft, ChevronRight, File, FileText, Folder, HardDrive, Link as LinkIcon, Settings2, Video,
 } from "lucide-react";
 
 export interface FileWidgetSettings {
